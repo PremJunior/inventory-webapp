@@ -7,14 +7,6 @@ my_inventory = inventory()
 def home():
     return render_template("home.html", items =  my_inventory.items.values())
 
-# @app.route("/about-us")
-# def about_page():
-#     return "This is about us page"
-
-# @app.route("/contact-us")
-# def contact_us_page():
-#     return "This is contact us page"
-
 @app.route("/api/items")
 def get_items():
     items_lst = []
@@ -35,6 +27,13 @@ def  add_item():
         data["value"]
     )
     return jsonify({"message" : "item added"}), 201
+
+@app.route("/api/items/<name>", methods = ["DELETE"])
+def delete_item(name):
+    if name not in my_inventory.items:
+        return jsonify({"error" : "item not found"}),404
+    my_inventory.delete_item(name)
+    return jsonify({"message" : "item deleted"}),200
 
 if __name__ == "__main__": 
     app.run(debug=True)

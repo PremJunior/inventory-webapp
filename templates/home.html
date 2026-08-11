@@ -5,13 +5,15 @@
     <h1>Inventory</h1>
     <ul>
     {% for item in items %}
-        <li>{{ item.name }} - {{ item.stock }} units @ {{ item.value }} each</li>
+        <li>{{ item.name }} - {{ item.stock }} units @ {{ item.value }} each
+        <button class="deleteBtn" data-name="{{ item.name }}">Delete</button>
+        </li>
     {% endfor %}
     </ul>
     <h2><u>Add New item</u></h2>
-    <input type="text" id="itemName" placeholder="Name">
-    <input type="number" id="itemStock" placeholder="Stock">
-    <input type="number" id="itemValue" placeholder="Value">
+    <input type="text" id="itemName" placeholder="Name" required>
+    <input type="number" id="itemStock" placeholder="Stock" required>
+    <input type="number" id="itemValue" placeholder="Value" required>
     <button id="addBtn">Add Item</button>
 
     <script>
@@ -28,6 +30,22 @@
             let result = await response.json();
             console.log(result);
             location.reload();
+        });
+
+        async function deleteItem(name) {
+            let response = await fetch(`/api/items/${name}`, {
+                method : "DELETE"
+            });
+            let result = await response.json();
+            console.log(result)
+        }
+
+        document.querySelectorAll(".deleteBtn").forEach(button => {
+            button.addEventListener("click", async () => {
+                let name = button.dataset.name;
+                await deleteItem(name);
+                button.parentElement.remove();
+            });
         });
     </script>
 </body>
