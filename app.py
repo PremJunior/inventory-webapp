@@ -35,5 +35,18 @@ def delete_item(name):
     my_inventory.delete_item(name)
     return jsonify({"message" : "item deleted"}),200
 
+@app.route("/api/items/<name>", methods = ["PUT"])
+def edit_item(name):
+    data = request.get_json()
+    if name not in my_inventory.items:
+        return jsonify({"message" : "item not found"}),404
+    my_inventory.edit_item(
+        name,
+        data.get("name"),
+        data.get("stock"),
+        data.get("value")
+    )
+    return jsonify({"message" : "item updated"}),200
+
 if __name__ == "__main__": 
     app.run(debug=True)

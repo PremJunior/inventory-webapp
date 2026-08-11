@@ -5,8 +5,10 @@
     <h1>Inventory</h1>
     <ul>
     {% for item in items %}
-        <li>{{ item.name }} - {{ item.stock }} units @ {{ item.value }} each
-        <button class="deleteBtn" data-name="{{ item.name }}">Delete</button>
+        <li>
+             <span class="itemInfo">{{ item.name }} - {{ item.stock }} units @ {{ item.value }} each</span>
+             <button class="editBtn" data-name="{{ item.name }}" data-stock="{{ item.stock }}" data-value="{{ item.value }}">Edit</button>
+            <button class="deleteBtn" data-name="{{ item.name }}">Delete</button>
         </li>
     {% endfor %}
     </ul>
@@ -29,7 +31,7 @@
             });
             let result = await response.json();
             console.log(result);
-            location.reload();
+            // location.reload();
         });
 
         async function deleteItem(name) {
@@ -47,6 +49,45 @@
                 button.parentElement.remove();
             });
         });
+
+        async function edit_item(name, newName, newStock, newValue) {
+            let response = await fetch(`/api/items/${name}`,{
+                method : "PUT",
+                headers : {"Content-Type" : "application/json"},
+                body : JSON.stringify({
+                    name : newName,
+                    stock : newStock,
+                    value : newValue
+                })
+            });
+            let result = await response.json();
+            console.log(result);
+        }
+
+        document.querySelectorAll(".editBtn").forEach(button => {
+            button.addEventListener("click", async () => {
+                let name = button.dataset.name;
+                let stock = button.dataset.stock;
+                let value = button.dataset.value;
+
+                let newName = prompt("Enter new name: ",name);
+                let newStock = prompt("Enter new stock: ", stock);
+                let newValue = prompt("Enter new value: ",value);
+
+                let response = await fetch(`/api/items/${name}`, {
+                    method : "PUT",
+                    headers : {"Content-Type" : "application/json"},
+                    body : JSON.stringify({
+                        name : newName,
+                        stock : parseInt(newStock),
+                        value : parseInt(newValue)
+                    })
+                });
+                let result = await response.json();
+                console.log(result);
+            });
+        });
+
     </script>
 </body>
 </html>

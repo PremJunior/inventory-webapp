@@ -114,7 +114,7 @@ class inventory:
             return
         obj = self.items[current_name]
         name_ok = obj.edit(name=new_name, stock=new_stock, value=new_value)
-        if new_name is not None and name_ok:
+        if new_name is not None and name_ok and new_name != current_name:
             self.items[new_name] = obj      # add under new key
             del self.items[current_name]    # remove old key
         if name_ok or new_stock is not None or new_value is not None:
