@@ -60,3 +60,11 @@ def update_item(current_name, new_name = None, new_stock = None, new_value = Non
     conn.close()
     print("item updated successfully")
     return True
+
+def get_item_by_name(name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, stock, value FROM items WHERE name = ?",(name,))
+    item = cursor.fetchone()
+    conn.close()
+    return item
