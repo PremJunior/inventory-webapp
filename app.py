@@ -1,8 +1,22 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, session
 import database as db
 from validation import validate_name, validate_stock, validate_value
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 app = Flask(__name__)
+app.secret_key = "viuewhfu934hfewh82hjfdhw8r"
+db.create_table()
+db.create_sales_table()
+db.create_users_table()
+
+def login_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not session.get("logged_in"):
+            return jsonify({"message" : "please login"}),401
+        return func(*args, **kwargs)
+    return wrapper
 
 @app.route("/")                                 #done
 def home():
@@ -20,7 +34,8 @@ def get_items():
         })
     return jsonify(items_lst)
 
-@app.route("/api/items", methods = ["POST"])                #done
+@app.route("/api/items", methods = ["POST"])             
+@login_required
 def  add_item():
     data = request.get_json()
     if not validate_name(data.get("name")):
@@ -47,7 +62,8 @@ def  add_item():
         "item" : {"name" : item[0], "stock" : item[1], "value" : item[2]}
         }), 201
 
-@app.route("/api/items/<name>", methods = ["DELETE"])               #done
+@app.route("/api/items/<name>", methods = ["DELETE"])        
+@login_required
 def delete_item(name):
     rows = db.load_all_items()
     if not any(row[0] == name for row in rows):
@@ -55,7 +71,8 @@ def delete_item(name):
     db.delete_item_from_db(name)
     return jsonify({"message" : "item deleted"}),200
 
-@app.route("/api/items/<name>", methods = ["PUT"])              #done
+@app.route("/api/items/<name>", methods = ["PUT"])            
+@login_required
 def edit_item(name):
     data = request.get_json()
     if not validate_name(data.get("name")):
@@ -76,6 +93,7 @@ def edit_item(name):
     return jsonify({"message": "item updated"}), 200
 
 @app.route("/api/items/<name>/sell", methods = ["POST"])
+@login_required
 def sell_item(name):
     data = request.get_json()
     if not validate_name(name):
@@ -89,7 +107,42 @@ def sell_item(name):
         return jsonify({"message" : "insufficient stock"}),400
     remaining = item[1] - data.get("quantity")
     db.update_item(name, new_stock= remaining)
+    db.record_sale(name, data.get("quantity"), item[2])
     return jsonify({"message" : "item sold", "stock" : remaining}),200
+
+@app.route("/api/sales", methods = ["GET"])
+def get_sales():
+    sales = db.get_all_sales()
+    sales_list = []
+    for sale in sales:
+        sales_list.append({
+            "id" : sale[0],
+            "name" : sale[1],
+            "quantity" : sale[2],
+            "price" : sale[3],
+            "timestamp" : sale[4]
+        })
+    return jsonify(sales_list)
+
+@app.route("/api/login", methods = ["POST"])
+def login():
+    data = request.get_json()
+    username = data.get("username")
+    password = data.get("password")
+    user = db.get_user_by_username(username)
+    if user is None:
+        return jsonify({"message" : "invalid username or password"}),401
+    if check_password_hash(user[1], password):
+        session["logged_in"] = True
+        return jsonify({"message" : "logged in successfully"}),200
+    else:
+        return jsonify({"message" : "invalid username or password"}),401
+
+@app.route("/api/logout", methods = ["POST"])
+def logout():
+    session.clear()
+    return jsonify({"message" : "logged out successfully"}), 200
 
 if __name__ == "__main__": 
     app.run(debug=True)
+

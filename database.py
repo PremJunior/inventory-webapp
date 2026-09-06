@@ -1,4 +1,6 @@
 import sqlite3
+from datetime import datetime
+timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def get_connection():
     return sqlite3.connect("inventory.db")
@@ -68,3 +70,59 @@ def get_item_by_name(name):
     item = cursor.fetchone()
     conn.close()
     return item
+
+def create_sales_table():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_name TEXT,
+            quantity INTEGER,
+            price_at_sale INTEGER,
+            timestamp TEXT
+)
+    """)
+    conn.commit()
+    conn.close()
+
+def record_sale(item_name, quantity, price_at_sale):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO sales (item_name, quantity, price_at_sale, timestamp)
+        VALUES (?, ?, ?, ?)
+    """, (item_name, quantity, price_at_sale, timestamp))
+    conn.commit()
+    conn.close()
+
+def get_all_sales():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM sales ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def create_users_table():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL)")
+    conn.commit()
+    conn.close()
+
+def create_user(username, password_hash):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO users (username, password_hash) VALUES (?,?)",(username, password_hash))
+    conn.commit()
+    conn.close()
+
+def get_user_by_username(username):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT username, password_hash FROM users WHERE username = ?", (username,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
