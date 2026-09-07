@@ -51,6 +51,30 @@
             }
         });
 
+        //some code for login toast
+        let params = new URLSearchParams(window.location.search);
+        if(params.get("login") === "success"){
+            showToast("Logged in Successfully");
+            history.replaceState({}, "", "/");
+        }
+
+        document.getElementById("logoutLink").addEventListener("click", async (event) =>{
+            event.preventDefault();
+            try{
+                const response = await fetch("/api/logout", {method : "POST"});
+                const result = await response.json();
+
+                if(!response.ok){
+                    throw new error("logout failed, 401");
+                }
+                console.log(result.message);
+                window.location.href = "/login";
+            }catch(error){
+                console.log("Logout error: ", error)
+            }
+        })
+
+
         function createItemElement(item) {
             let li = document.createElement("li");
             let stockClass = item.stock < 10 ? "stock-low" : "stock-ok";
@@ -254,6 +278,33 @@
                 }
         }
 
+        async function updateAuthLinks() {
+            try{
+                const response = await fetch("/api/session-status");
+
+                const loginLink = document.getElementById("loginLink");
+                const signupLink = document.getElementById("signupLink");
+                const logoutLink = document.getElementById("logoutLink");
+                const profileName = document.getElementById("profileName");
+                const result = await response.json();
+                if(result.logged_in){
+                    loginLink.style.display = "none";
+                    signupLink.style.display = "none";
+                    logoutLink.style.display = "block";
+                    document.getElementById("profileCard").style.display = "flex";
+                    profileName.style.display = "block";
+                    profileName.textContent = result.username;
+                }else{
+                    loginLink.style.display = "block";
+                    signupLink.style.display = "block";
+                    logoutLink.style.display = "none";
+                    document.getElementById("profileCard").style.display = "none";
+                }
+            }catch(error){
+                console.log("couldn't check session status: ", error)
+            }
+        }
         loadItems()
         loadSalesHistory()
+        updateAuthLinks()
     

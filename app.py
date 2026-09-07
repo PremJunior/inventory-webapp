@@ -3,6 +3,8 @@ import database as db
 from validation import validate_name, validate_stock, validate_value
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+from datetime import datetime
+timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 app = Flask(__name__)
 app.secret_key = "viuewhfu934hfewh82hjfdhw8r"
@@ -18,11 +20,28 @@ def login_required(func):
         return func(*args, **kwargs)
     return wrapper
 
-@app.route("/")                                 #done
+
+@app.route("/")                                 
 def home():
     return render_template("home.html")
 
-@app.route("/api/items")                                #done
+@app.route("/login")
+def login_page():
+    return render_template("login.html")
+
+@app.route("/signup")
+def signup_page():
+    return render_template("signup.html")
+
+@app.route("/api/session-status", methods = ["GET"])
+def session_status():
+    return jsonify({
+        "logged_in" : bool(session.get("logged_in")),
+        "username" : session.get("username")
+    })
+
+
+@app.route("/api/items")                                
 def get_items():
     rows = db.load_all_items()
     items_lst = []
@@ -132,16 +151,48 @@ def login():
     user = db.get_user_by_username(username)
     if user is None:
         return jsonify({"message" : "invalid username or password"}),401
-    if check_password_hash(user[1], password):
+    if check_password_hash(user[2], password):
         session["logged_in"] = True
+        session["username"] = username
         return jsonify({"message" : "logged in successfully"}),200
     else:
         return jsonify({"message" : "invalid username or password"}),401
+
+
+@app.route("/api/signup", methods = ["POST"])
+def signup():
+    try:
+        data = request.get_json()
+        fullname = data.get("fullname")
+        dob = data.get("dob")
+        email = data.get("email")
+        username = data.get("username")
+        passwordhash = generate_password_hash(data.get("password"))
+
+        existing_user = db.get_user_by_username(username)
+        if existing_user:
+            return jsonify({"message" : "username already taken"}), 400
+        existing_email = db.get_user_by_email(email)
+        if existing_email:
+            return jsonify({"message" : "email already registered"}), 400
+        
+        if db.create_user(username, passwordhash, fullname, email, dob, timestamp):
+            session["logged_in"] = True
+            session["username"] = username
+            return jsonify({"message" : "signed up successfully"}), 200
+        else:
+            return jsonify({"message" : "failed to sign up"}), 400
+    except Exception as e:
+        print(f"error: {e}")
+        return jsonify({"message" : "Internal server error"}), 500
+
+
 
 @app.route("/api/logout", methods = ["POST"])
 def logout():
     session.clear()
     return jsonify({"message" : "logged out successfully"}), 200
+
 
 if __name__ == "__main__": 
     app.run(debug=True)

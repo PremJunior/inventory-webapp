@@ -107,22 +107,59 @@ def get_all_sales():
 def create_users_table():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL)")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            full_name TEXT NOT NULL,      
+            email TEXT UNIQUE NOT NULL,  
+            dob TEXT NOT NULL,            
+            created_at TEXT               
+        )
+    """)
     conn.commit()
     conn.close()
 
-def create_user(username, password_hash):
+def create_user(username, password_hash, full_name, email, dob, timestamp):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO users (username, password_hash) VALUES (?,?)",(username, password_hash))
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute("""
+            INSERT INTO users (username, password_hash, full_name, email, dob, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """, (username, password_hash, full_name, email, dob, timestamp))
+        conn.commit()
+        return True
+    except Exception as e:
+        print("error: ", e)
+        return False
+    finally:
+        conn.close()
 
 def get_user_by_username(username):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT username, password_hash FROM users WHERE username = ?", (username,))
+    cursor.execute("SELECT id, username, password_hash, full_name, email, dob, created_at FROM users WHERE username = ?", (username,))
     user = cursor.fetchone()
     conn.close()
     return user
+
+def get_user_by_email(email):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, password_hash, full_name, email, dob, created_at FROM users WHERE email = ?", (email,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
+def delete_users():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users   where   username = ?", ("employee", ))
+    cursor.execute("DELETE FROM users   where   username = ?", ("uname", ))
+    conn.commit()
+    conn.close()
+
+
 

@@ -3,17 +3,26 @@
 <head>
 <title>Inventory</title>
 <style>
+  /* ===== MODERN CSS VARIABLES ===== */
   :root {
     --ink: #1B1F3B;
     --paper: #F5F6FA;
     --accent: #5B5FEF;
     --accent-dark: #4448C7;
+    --violet: #8B5FEF;
     --coral: #E8543E;
     --stone: #8B8FA8;
     --stone-light: #E3E5F0;
     --ok: #22A06B;
+    --shadow-sm: 0 2px 8px rgba(27, 31, 59, 0.06);
+    --shadow-md: 0 4px 16px rgba(27, 31, 59, 0.08);
+    --shadow-lg: 0 8px 32px rgba(27, 31, 59, 0.10);
+    --radius: 12px;
+    --transition: all 0.2s ease;
   }
+
   * { box-sizing: border-box; }
+
   body {
     margin: 0;
     background: var(--paper);
@@ -21,156 +30,418 @@
     font-family: 'Segoe UI', -apple-system, sans-serif;
   }
 
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 260px;
+    background: var(--ink);
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+    padding: 24px 16px;
+    overflow-y: auto;
+  }
+
+  .sidebar.open { transform: translateX(0); }
+
+  .sidebar-brand {
+    color: white;
+    font-weight: 700;
+    font-size: 20px;
+    padding: 0 8px 24px;
+    letter-spacing: -0.5px;
+  }
+
+  .sidebar-brand span {
+    color: #3DE0C8;
+  }
+
+  .nav-link {
+    display: block;
+    color: #C7CAE8;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 11px 12px;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .nav-link:hover {
+    background: #262B52;
+    color: white;
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(27, 31, 59, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 90;
+  }
+
+  .sidebar-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .profile-card {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px 12px 24px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .profile-photo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .profile-name {
+    color: white;
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .profile-role {
+    color: #9EA3D1;
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  /* ===== TOPBAR ===== */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .hamburger {
+    background: white;
+    border: 1px solid var(--stone-light);
+    border-radius: 10px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: var(--transition);
+  }
+
+  .hamburger:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .hamburger div {
+    width: 16px;
+    height: 2px;
+    background: var(--ink);
+    position: relative;
+  }
+
+  .hamburger div::before,
+  .hamburger div::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 2px;
+    background: var(--ink);
+    left: 0;
+  }
+
+  .hamburger div::before { top: -5px; }
+  .hamburger div::after { top: 5px; }
+
+  .topbar h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, var(--ink), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ===== APP CONTAINER ===== */
   .app {
-    max-width: 1100px;   /* was 860px — widen to fit the new column */
+    max-width: 1100px;
     margin: 0 auto;
     padding: 0 24px 80px;
   }
 
   .main-columns {
-      display: flex;
-      gap: 50px;
-      align-items: flex-start;
+    display: flex;
+    gap: 50px;
+    align-items: flex-start;
   }
 
   .item-column { flex: 2; min-width: 0; }
+
+  /* ===== SALES COLUMN ===== */
   .sales-column {
-      flex: 1;
-      min-width: 260px;
-      background: white;
-      border: 1px solid var(--stone-light);
-      border-radius: 12px;
-      padding: 16px;
+    flex: 1;
+    min-width: 260px;
+    background: white;
+    border: 1px solid var(--stone-light);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .sales-column h2 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 14px 0;
+    color: var(--ink);
   }
 
   #salesList {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-height: 500px;
-      overflow-y: auto;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 500px;
+    overflow-y: auto;
   }
 
   .sale-entry {
-      font-size: 13px;
-      border-bottom: 1px solid var(--stone-light);
-      padding-bottom: 8px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--stone-light);
+    padding-bottom: 8px;
   }
-  .sale-entry .sale-time { color: var(--stone); font-size: 12px; }
 
-  .sidebar {
-    position: fixed; top: 0; left: 0; height: 100%; width: 260px;
-    background: var(--ink);
-    transform: translateX(-100%);
-    transition: transform 0.25s ease;
-    z-index: 100;
-    padding: 24px 16px;
+  .sale-entry .sale-time {
+    color: var(--stone);
+    font-size: 12px;
   }
-  .sidebar.open { transform: translateX(0); }
-  .sidebar-brand { color: white; font-weight: 700; font-size: 17px; padding: 0 8px 24px; }
-  .nav-link {
-    display: block; color: #C7CAE8; text-decoration: none; font-size: 14px;
-    font-weight: 500; padding: 11px 12px; border-radius: 8px; margin-bottom: 2px; cursor: pointer;
-  }
-  .nav-link:hover { background: #262B52; color: white; }
-  .sidebar-overlay {
-    position: fixed; inset: 0; background: rgba(27,31,59,0.35);
-    opacity: 0; pointer-events: none; transition: opacity 0.25s ease; z-index: 90;
-  }
-  .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
 
-  .topbar { display: flex; align-items: center; gap: 16px; padding: 20px 24px; max-width: 860px; margin: 0 auto; }
-  .hamburger {
-    background: white; border: 1px solid var(--stone-light); border-radius: 8px;
-    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0;
+  /* ===== ITEM LIST ===== */
+  #itemList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 420px;
+    overflow-y: auto;
   }
-  .hamburger div { width: 16px; height: 2px; background: var(--ink); position: relative; }
-  .hamburger div::before, .hamburger div::after {
-    content: ""; position: absolute; width: 16px; height: 2px; background: var(--ink); left: 0;
-  }
-  .hamburger div::before { top: -5px; }
-  .hamburger div::after { top: 5px; }
-  .topbar h1 { font-size: 22px; font-weight: 700; margin: 0; }
-
-  #itemList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto;}
 
   #itemList li {
-    background: white; border: 1px solid var(--stone-light); border-radius: 12px;
-    padding: 14px 16px; display: flex; align-items: center; gap: 16px;
-  }
-  #itemList li:hover { border-color: var(--accent); }
-
-  .itemInfo { flex: 1; font-size: 14px; font-weight: 600; }
-
-  .editBtn, .deleteBtn, .sellBtn {
-    border: none; border-radius: 7px; padding: 7px 12px; font-size: 13px;
-    font-weight: 600; cursor: pointer; background: transparent;
-    border: 1px solid var(--stone-light); color: var(--ink);
-  }
-  .editBtn:hover, .sellBtn:hover { border-color: var(--accent); color: var(--accent); }
-  .deleteBtn { color: var(--coral); }
-  .deleteBtn:hover { background: #FCEDEB; border-color: var(--coral); }
-
-  h2 { font-size: 15px; font-weight: 700; margin: 32px 0 14px; }
-
-  #itemName, #itemStock, #itemValue {
-    padding: 10px 12px; border: 1px solid var(--stone-light); border-radius: 8px; font-size: 14px; margin-right: 6px;
-  }
-  #itemName:focus, #itemStock:focus, #itemValue:focus {
-    outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent);
-  }
-
-  #addBtn {
-    border: none; border-radius: 8px; padding: 10px 16px; font-size: 14px;
-    font-weight: 600; cursor: pointer; background: var(--accent); color: white;
-  }
-  #addBtn:hover { background: var(--accent-dark); }
-
-  .search-input {
-    width: 100%; padding: 12px 16px; margin-bottom: 16px;
-    border: 1px solid var(--stone-light); border-radius: 10px; font-size: 14px;
-}
-.search-input:focus {
-    outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent);
-}
-
-.summary-row {
-    display: flex;
-    gap: 12px;
-    margin: 8px 0 20px;
-    width: 711px;
-}
-
-.summary-card {
     background: white;
     border: 1px solid var(--stone-light);
-    border-radius: 12px;
-    padding: 16px 18px;
-    flex: 1;
-}
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+  }
 
-.summary-card .num {
-    font-size: 24px;
+  #itemList li:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .itemInfo {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* ===== BUTTONS ===== */
+  .editBtn,
+  .deleteBtn,
+  .sellBtn {
+    border: none;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid var(--stone-light);
+    color: var(--ink);
+    transition: var(--transition);
+  }
+
+  .editBtn:hover,
+  .sellBtn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: #F0F0FF;
+  }
+
+  .deleteBtn {
+    color: var(--coral);
+  }
+
+  .deleteBtn:hover {
+    background: #FCEDEB;
+    border-color: var(--coral);
+  }
+
+  /* ===== SUMMARY ROW ===== */
+  .summary-row {
+    display: flex;
+    gap: 14px;
+    margin: 8px 0 20px;
+  }
+
+  .summary-card {
+    background: white;
+    border: 1px solid var(--stone-light);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    flex: 1;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+  }
+
+  .summary-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .summary-card .num {
+    font-size: 28px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
-}
+    line-height: 1.2;
+  }
 
-.summary-card .label {
+  .summary-card .label {
     font-size: 12px;
     color: var(--stone);
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-    margin-top: 3px;
-}
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+  }
 
-.summary-card.warn .num { color: var(--coral); }
-.toast-container {
+  .summary-card.warn .num {
+    color: var(--coral);
+  }
+
+  .summary-card .num .currency {
+    font-size: 18px;
+    color: var(--stone);
+    font-weight: 400;
+    margin-right: 2px;
+  }
+
+  /* ===== SEARCH ===== */
+  .search-input {
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--stone-light);
+    border-radius: 10px;
+    font-size: 14px;
+    background: white;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .search-input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+  }
+
+  .search-input::placeholder {
+    color: var(--stone);
+  }
+
+  /* ===== HEADINGS ===== */
+  h2 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 32px 0 14px;
+    color: var(--ink);
+  }
+
+  /* ===== ADD FORM ===== */
+  .add-form-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .add-form-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 14px;
+    border: 1px solid var(--stone-light);
+    border-radius: 10px;
+    font-size: 14px;
+    background: white;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .add-form-row input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+  }
+
+  .add-form-row input::placeholder {
+    color: var(--stone);
+  }
+
+  #addBtn {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--accent), var(--violet));
+    color: white;
+    transition: var(--transition);
+    box-shadow: 0 4px 12px rgba(91, 95, 239, 0.25);
+    flex-shrink: 0;
+  }
+
+  #addBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(91, 95, 239, 0.35);
+  }
+
+  #addBtn:active {
+    transform: scale(0.97);
+  }
+
+  /* ===== TOASTS ===== */
+  .toast-container {
     position: fixed;
     top: 20px;
     right: 30px;
@@ -180,108 +451,236 @@
     gap: 8px;
     max-height: 500px;
     overflow-y: auto;
-}
+  }
 
-.toast {
+  .toast {
     background: var(--ink);
     color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
+    padding: 14px 22px;
+    border-radius: 10px;
     font-size: 14px;
     font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-lg);
     opacity: 0;
     transform: translateY(-10px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
 
-.toast.show { opacity: 1; transform: translateY(0); }
-.toast.success { background: var(--ok); }
-.toast.error { background: var(--coral); }
+  .toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
 
-.add-form-row {
-    display: flex;
-    gap: 8px;
-}
+  .toast.success {
+    background: var(--ok);
+  }
 
-.add-form-row input {
-    flex: 1;
-    min-width: 0;
-}
+  .toast.error {
+    background: var(--coral);
+  }
 
-.add-form-row button {
-    flex-shrink: 0;
-}
+  /* ===== STOCK PILL ===== */
+  .stock-pill {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    padding: 5px 14px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .stock-ok {
+    background: #E4F7ED;
+    color: var(--ok);
+  }
+
+  .stock-low {
+    background: #FCEDEB;
+    color: var(--coral);
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 900px) {
+    .main-columns {
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    .sales-column {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .summary-row {
+      flex-wrap: wrap;
+    }
+
+    .summary-card {
+      min-width: 120px;
+      flex: 1;
+    }
+
+    .add-form-row {
+      flex-wrap: wrap;
+    }
+
+    .add-form-row input {
+      flex: 1 1 120px;
+    }
+
+    #addBtn {
+      flex: 1 1 100%;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .topbar {
+      padding: 16px 16px;
+    }
+
+    .topbar h1 {
+      font-size: 20px;
+    }
+
+    .app {
+      padding: 0 16px 60px;
+    }
+
+    .summary-row {
+      flex-direction: column;
+    }
+
+    .summary-card .num {
+      font-size: 24px;
+    }
+
+    #itemList li {
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .itemInfo {
+      width: 100%;
+    }
+
+    .editBtn,
+    .deleteBtn,
+    .sellBtn {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+  }
 </style>
 </head>
 <body>
 
+<!-- ===== SIDEBAR ===== -->
 <div class="sidebar-overlay" id="overlay"></div>
+
 <nav class="sidebar" id="sidebar">
-    <div class="sidebar-brand">StoreStock</div>
-    <a class="nav-link">Home</a>
-    <a class="nav-link">Dashboard</a>
-    <a class="nav-link">Reports</a>
-    <a class="nav-link">Log in</a>
-    <a class="nav-link">Sign up</a>
+  <div class="sidebar-brand">Store<span>Stock</span></div>
+
+  <div class="profile-card" id="profileCard">
+    <img
+      class="profile-photo"
+      src="/static/images/profilepic.webp"
+      alt="Profile photo"
+    >
+    <div class="profile-name" id="profileName"></div>
+    <div class="profile-role">Administrator</div>
+  </div>
+
+  <a class="nav-link">🏠 Home</a>
+  <a class="nav-link" href="/dashboard">📊 Dashboard</a>
+  <a class="nav-link">📋 Reports</a>
+  <a class="nav-link" href="#">⚙️ Account settings</a>
+  <a class="nav-link" id="loginLink" href="/login">🔑 Log in</a>
+  <a class="nav-link" id="signupLink" href="/signup">✏️ Sign up</a>
+  <a class="nav-link" id="logoutLink" href="#" style="display: none;">🚪 Log Out</a>
 </nav>
 
+<!-- ===== TOPBAR ===== -->
 <div class="topbar">
-    <div class="hamburger" id="hamburger"><div></div></div>
-    <h1>Inventory</h1>
+  <div class="hamburger" id="hamburger"><div></div></div>
+  <h1>Inventory</h1>
 </div>
+
+<!-- ===== TOASTS ===== -->
 <div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== MAIN APP ===== -->
 <div class="app">
-    <div class="main-columns">
-      <div class="item-column">
-        <div class="summary-row">
-          <div class="summary-card">
-              <div class="num" id="statTotal">0</div>
-              <div class="label">Items tracked</div>
-          </div>
-          <div class="summary-card warn">
-              <div class="num" id="statLowStock">0</div>
-              <div class="label">Low stock</div>
-          </div>
+  <div class="main-columns">
+
+    <!-- ===== ITEM COLUMN ===== -->
+    <div class="item-column">
+
+      <!-- Summary Cards -->
+      <div class="summary-row">
+        <div class="summary-card">
+          <div class="num" id="statTotal">0</div>
+          <div class="label">📦 Items tracked</div>
         </div>
-        <input class="search-input" type="text" id="searchInput" placeholder="Search items…">
-        <ul id="itemList"></ul>
-        <h2>Add New Item</h2>
-        <div class="add-form-row">
-            <input type="text" id="itemName" placeholder="Name" required>
-            <input type="number" id="itemStock" placeholder="Stock" required>
-            <input type="number" id="itemValue" placeholder="Value" required>
-            <button id="addBtn">Add Item</button>
+        <div class="summary-card warn">
+          <div class="num" id="statLowStock">0</div>
+          <div class="label">⚠️ Low stock</div>
         </div>
       </div>
-      <div class="sales-column">
-        <h2>Recent Sales</h2>
-        <ul id="salesList"></ul>
+
+      <!-- Search -->
+      <input
+        class="search-input"
+        type="text"
+        id="searchInput"
+        placeholder="🔍 Search items…"
+      >
+
+      <!-- Item List -->
+      <ul id="itemList"></ul>
+
+      <!-- Add Form -->
+      <h2>➕ Add New Item</h2>
+      <div class="add-form-row">
+        <input type="text" id="itemName" placeholder="Name" required>
+        <input type="number" id="itemStock" placeholder="Stock" required>
+        <input type="number" id="itemValue" placeholder="Value" required>
+        <button id="addBtn">Add Item</button>
+      </div>
     </div>
+
+    <!-- ===== SALES COLUMN ===== -->
+    <div class="sales-column">
+      <h2>🕐 Recent Sales</h2>
+      <ul id="salesList"></ul>
     </div>
+
+  </div>
 </div>
 
+<!-- ===== SCRIPTS ===== -->
 <script src="/static/script.js"></script>
 <script>
-    document.getElementById("hamburger").addEventListener("click", () => {
-        document.getElementById("sidebar").classList.add("open");
-        document.getElementById("overlay").classList.add("open");
-    });
-    document.getElementById("overlay").addEventListener("click", () => {
-        document.getElementById("sidebar").classList.remove("open");
-        document.getElementById("overlay").classList.remove("open");
-    });
+  // Hamburger menu
+  document.getElementById("hamburger").addEventListener("click", () => {
+    document.getElementById("sidebar").classList.add("open");
+    document.getElementById("overlay").classList.add("open");
+  });
 
-    document.getElementById("searchInput").addEventListener("input", () => {
+  document.getElementById("overlay").addEventListener("click", () => {
+    document.getElementById("sidebar").classList.remove("open");
+    document.getElementById("overlay").classList.remove("open");
+  });
+
+  // Search filter
+  document.getElementById("searchInput").addEventListener("input", () => {
     let query = document.getElementById("searchInput").value.trim().toLowerCase();
     let items = document.querySelectorAll("#itemList li");
 
     items.forEach(li => {
-        let name = li.querySelector(".editBtn").dataset.name.toLowerCase();
-        li.style.display = name.includes(query) ? "" : "none";
+      let name = li.querySelector(".editBtn").dataset.name.toLowerCase();
+      li.style.display = name.includes(query) ? "" : "none";
     });
-});
-
+  });
 </script>
 
 </body>
