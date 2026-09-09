@@ -33,6 +33,18 @@ def login_page():
 def signup_page():
     return render_template("signup.html")
 
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
+
+@app.route("/reports")
+def reports():
+    return render_template("reports.html")
+
+@app.route("/accountsetting")
+def accountsetting():
+    return render_template("accountsetting.html")
+
 @app.route("/api/session-status", methods = ["GET"])
 def session_status():
     return jsonify({
@@ -193,6 +205,10 @@ def logout():
     session.clear()
     return jsonify({"message" : "logged out successfully"}), 200
 
+
+@app.route("/api/dashboard/stats", methods = ["GET"])
+def stats():
+    pass
 
 if __name__ == "__main__": 
     app.run(debug=True)
