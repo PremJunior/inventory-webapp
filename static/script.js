@@ -203,6 +203,7 @@ function createItemElement(item) {
             editBtn.dataset.stock = displayedStock;
             updateStats();
             applyFilters();
+            loadSalesHistory();
         } catch (error) {
             alert(error.message);
         }
@@ -257,6 +258,22 @@ async function updateStats() {
     }
 }
 
+//=========UPDATE TODAY SALES=========  
+function updateTodaySales(sales){
+    let todaySales = document.getElementById("statTodaySales");
+    if (!todaySales) return;
+
+    let today = new Date();
+    let todayTotal = sales.reduce((sum, sale) => {
+        let saleDate = new Date(sale.timestamp); 
+        let isToday = 
+            saleDate.getFullYear() === today.getFullYear() &&
+            saleDate.getMonth() === today.getMonth() &&
+            saleDate.getDay() === today.getDay();
+        return isToday? sum + (sale.quantity * sale.price) : sum;
+    }, 0)
+    todaySales.textContent = "Rs." + todayTotal.toLocaleString();
+}
 // ===== LOAD ITEMS =====
 async function loadItems() {
     try {
@@ -288,6 +305,7 @@ async function loadSalesHistory() {
                 <div class="sale-time">${sale.timestamp}</div>
             `;
             salesList.appendChild(li);
+            updateTodaySales(result);
         });
     } catch (error) {
         console.log("Error loading sales: ", error);

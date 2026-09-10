@@ -206,9 +206,23 @@ def logout():
     return jsonify({"message" : "logged out successfully"}), 200
 
 
-@app.route("/api/dashboard/stats", methods = ["GET"])
-def stats():
-    pass
+@app.route("/api/dashboard/stats")
+@login_required
+def dashboard_stats():
+    try:
+        start = request.args.get("start")
+        end = request.args.get("end")
+        data = db.get_sales_by_range(start, end)
+        total_sales_count = len(data)
+        total_sales_value = 0
+        for sale in data:
+            id, name, quantity, price, timestamp = sale
+            total_sales_value += quantity * price
+        return jsonify({"totalsalescount" : total_sales_count, "totalsalesvalue" : total_sales_value})
+    except Exception as e:
+        return jsonify({"message" : "Error fetching dashboard stats"}), 500
+
+
 
 if __name__ == "__main__": 
     app.run(debug=True)

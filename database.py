@@ -161,5 +161,10 @@ def delete_users():
     conn.commit()
     conn.close()
 
-
-
+def get_sales_by_range(start, end):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM sales  WHERE timestamp BETWEEN ? AND ?",(start, end))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows

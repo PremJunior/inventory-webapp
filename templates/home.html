@@ -863,7 +863,7 @@
     <div class="sales-column">
       <div class="sales-header">
         <h2>🕐 Recent Sales</h2>
-        <a href="/sales">View All →</a>
+        <a href="#">View All →</a>
       </div>
       <ul id="salesList"></ul>
     </div>
@@ -873,7 +873,6 @@
 
 <!-- ===== SCRIPTS ===== -->
 <script src="/static/script.js"></script>
-<script src="/static/auth.js"></script>
 
 <script>
   // Hamburger menu
@@ -891,39 +890,6 @@
   var now = new Date();
   var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   document.getElementById("currentDate").textContent = now.toLocaleDateString('en-US', options);
-
-  // Search and filter
-  var searchInput = document.getElementById("searchInput");
-  var currentFilter = 'all';
-
-  searchInput.addEventListener("input", function() {
-    applyFilters();
-  });
-
-  function filterItems(type) {
-    currentFilter = type;
-    document.querySelectorAll('.filter-btn').forEach(function(btn) {
-      btn.classList.remove('active');
-    });
-    event.target.classList.add('active');
-    applyFilters();
-  }
-
-  function applyFilters() {
-    var query = searchInput.value.trim().toLowerCase();
-    var items = document.querySelectorAll("#itemList li");
-
-    items.forEach(function(li) {
-      var name = li.querySelector(".item-name").textContent.toLowerCase();
-      var stockPill = li.querySelector(".stock-pill");
-      var isLowStock = stockPill && stockPill.classList.contains('stock-low');
-
-      var matchesSearch = name.includes(query);
-      var matchesFilter = (currentFilter === 'all') || (currentFilter === 'low' && isLowStock);
-
-      li.style.display = (matchesSearch && matchesFilter) ? "" : "none";
-    });
-  }
 
   // Update mini stats
   function updateMiniStats() {

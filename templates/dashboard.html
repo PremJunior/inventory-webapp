@@ -592,6 +592,107 @@
       flex-wrap: wrap;
     }
   }
+
+/* ===== DATE RANGE FILTER ===== */
+.date-range-bar {
+  max-width: 1200px;
+  margin: 0 auto 24px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.date-range-presets {
+  display: flex;
+  gap: 8px;
+}
+
+.preset-btn {
+  padding: 10px 16px;
+  border: 1px solid var(--stone-light);
+  border-radius: 10px;
+  background: white;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  color: var(--ink);
+}
+
+.preset-btn:hover {
+  border-color: var(--accent);
+  background: #F0F0FF;
+}
+
+.preset-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.date-range-inputs {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  background: white;
+  border: 1px solid var(--stone-light);
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.date-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--stone);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.date-field input[type="date"] {
+  border: 1px solid var(--stone-light);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  transition: var(--transition);
+}
+
+.date-field input[type="date"]:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+  background: white;
+}
+
+.date-range-arrow {
+  color: var(--stone);
+  font-size: 14px;
+  padding-bottom: 8px;
+}
+
+.btn-apply-range {
+  color: white;
+  background-color: #5B5FEF;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -625,6 +726,29 @@
 <div class="topbar">
   <div class="hamburger" id="hamburger"><div></div></div>
   <h1>Dashboard</h1>
+
+      <!-- ===== DATE RANGE FILTER ===== -->
+<div class="date-range-bar">
+  <div class="date-range-presets">
+    <button class="preset-btn active" data-range="month">This Month</button>
+    <button class="preset-btn" data-range="7days">Last 7 Days</button>
+    <button class="preset-btn" data-range="30days">Last 30 Days</button>
+    <button class="preset-btn" data-range="custom">Custom</button>
+  </div>
+
+  <div class="date-range-inputs">
+    <div class="date-field">
+      <label for="startDate">From</label>
+      <input type="date" id="startDate" disabled>
+    </div>
+    <span class="date-range-arrow">→</span>
+    <div class="date-field">
+      <label for="endDate">To</label>
+      <input type="date" id="endDate" disabled>
+    </div>
+    <button class="btn-apply-range" id="applyDateRange">Apply</button>
+  </div>
+</div>
 </div>
 
 <!-- ===== DASHBOARD CONTENT ===== -->
@@ -640,7 +764,7 @@
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-icon">📦</div>
-      <div class="stat-number" id="statTotalItems">-</div>
+      <div class="stat-number" id="statTotal">-</div>
       <div class="stat-label">Total Items</div>
     </div>
     <div class="stat-card success">
@@ -651,7 +775,7 @@
     <div class="stat-card">
       <div class="stat-icon">📈</div>
       <div class="stat-number" id="statTodaySales">-</div>
-      <div class="stat-label">Today's Sales</div>
+      <div class="stat-label">Total Sales</div>
     </div>
     <div class="stat-card danger">
       <div class="stat-icon">⚠️</div>
@@ -794,8 +918,7 @@
     try {
       var response = await fetch("/api/dashboard/stats");
       var data = await response.json();
-
-      // Update stats
+      //update stats
       document.getElementById("statTotalItems").textContent = data.total_items || 0;
       document.getElementById("statTotalValue").textContent = "₨ " + (data.total_value || 0).toLocaleString();
       document.getElementById("statLowStock").textContent = data.low_stock_count || 0;
@@ -851,11 +974,11 @@
         html += '</li>';
       }
       activityList.innerHTML = html;
-
     } catch (error) {
       console.error("Error loading dashboard:", error);
       document.getElementById("lowStockList").innerHTML = '<div class="stock-item"><span class="stock-name" style="color: var(--coral);">❌ Failed to load data</span><span></span></div>';
     }
+    await updateStats()
   }
 
   // ===== REFRESH FUNCTION =====
@@ -877,6 +1000,34 @@
   document.addEventListener("DOMContentLoaded", function() {
     loadDashboard();
   });
+
+  // =======SELECT TIMEFRAME =====  
+  document.querySelectorAll('.preset-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.preset-btn').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    btn.classList.add('active');
+    let isCustom = btn.dataset.range === 'custom';
+    document.getElementById('startDate').disabled = !isCustom;
+    document.getElementById('endDate').disabled = !isCustom;
+  });
+});
+
+async function updateStats() {
+    try {
+        let result = await apiRequest("/api/items");
+        let totalItems = result.length;
+        let lowStockItems = result.filter(item => item.stock < 10);
+        let lowStockCount = lowStockItems.length;
+        
+        document.getElementById("statTotal").textContent = totalItems;
+        document.getElementById("statLowStock").textContent = lowStockCount;
+        
+    } catch (error) {
+        console.log("Error updating stats: ", error);
+    }
+}
 </script>
 
 </body>
