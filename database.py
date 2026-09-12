@@ -77,22 +77,35 @@ def create_sales_table():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sales (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            item_name TEXT,
-            quantity INTEGER,
-            price_at_sale INTEGER,
-            timestamp TEXT
+            item_name TEXT NOT NULL,
+            quantity INTEGER NOT NULL,
+            price_at_sale INTEGER NOT NULL,
+            timestamp TEXT NOT NULL,
+            sold_by TEXT NOT NULL
 )
     """)
     conn.commit()
     conn.close()
 
-def record_sale(item_name, quantity, price_at_sale):
+def record_sale(item_name, quantity, price_at_sale, sold_by):
+    sale_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO sales (item_name, quantity, price_at_sale, timestamp)
-        VALUES (?, ?, ?, ?)
-    """, (item_name, quantity, price_at_sale, timestamp))
+        INSERT INTO sales (item_name, quantity, price_at_sale, timestamp, sold_by)
+        VALUES (?, ?, ?, ?, ?)
+    """, (item_name, quantity, price_at_sale, sale_timestamp, sold_by))
+    conn.commit()
+    conn.close()
+
+def record_activity(username, action, item_name, details):
+    activity_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO activity_log(username, action, item_name, details, timestamp)
+    VALUES(?, ?, ?, ?, ?)
+""",(username, action, item_name, details, activity_timestamp))
     conn.commit()
     conn.close()
 
@@ -152,12 +165,11 @@ def get_user_by_email(email):
     user = cursor.fetchone()
     conn.close()
     return user
-
+# to delete directly from db
 def delete_users():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM users   where   username = ?", ("employee", ))
-    cursor.execute("DELETE FROM users   where   username = ?", ("uname", ))
+    cursor.execute("DROP TABLE activity_log")
     conn.commit()
     conn.close()
 
@@ -165,6 +177,32 @@ def get_sales_by_range(start, end):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM sales  WHERE timestamp BETWEEN ? AND ?",(start, end))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def create_activity_log_table():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS activity_log(" \
+    "id INTEGER PRIMARY KEY AUTOINCREMENT," \
+    "USERNAME TEXT NOT NULL," \
+    "action TEXT NOT NULL," \
+    "item_name TEXT NOT NULL," \
+    "details TEXT NOT NULL," \
+    "timestamp TEXT NOT NULL)")
+    conn.commit()
+    conn.close()
+
+def get_recent_activities(limit = 5):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, username, action, item_name, details, timestamp
+        FROM activity_log
+        ORDER BY id DESC
+        LIMIT ?
+""",(limit,))
     rows = cursor.fetchall()
     conn.close()
     return rows

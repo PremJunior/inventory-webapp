@@ -14,7 +14,7 @@ async function apiRequest(url, options = {}) {
 }
 
 // ===== ADD ITEM =====
-document.querySelector("#addBtn").addEventListener("click", async () => {
+document.querySelector("#addBtn")?.addEventListener("click", async () => {
     try {
         let name = document.querySelector("#itemName").value.trim();
         let stock = document.querySelector("#itemStock").value.trim();
@@ -382,6 +382,7 @@ async function updateAuthLinks() {
         const signupLink = document.getElementById("signupLink");
         const logoutLink = document.getElementById("logoutLink");
         const profileName = document.getElementById("profileName");
+        const welcomeUser = document.getElementById("welcomeUser");
         const result = await response.json();
         
         if (result.logged_in) {
@@ -393,6 +394,9 @@ async function updateAuthLinks() {
             if (profileName) {
                 profileName.style.display = "block";
                 profileName.textContent = result.username;
+            }
+            if(welcomeUser){
+                welcomeUser.textContent = result.username;
             }
         } else {
             if (loginLink) loginLink.style.display = "block";
@@ -408,7 +412,9 @@ async function updateAuthLinks() {
 
 // ===== INIT =====
 document.addEventListener("DOMContentLoaded", function() {
-    loadItems();
-    loadSalesHistory();
+    if (document.querySelector("#itemList")) {
+        loadItems();
+        loadSalesHistory();
+    }
     updateAuthLinks();
 });

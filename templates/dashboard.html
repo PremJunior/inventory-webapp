@@ -415,6 +415,7 @@
     align-items: center;
     gap: 12px;
     font-size: 14px;
+    align-items: flex-start;
   }
 
   .activity-list li:last-child {
@@ -433,8 +434,21 @@
   .activity-dot.red { background: var(--coral); }
   .activity-dot.orange { background: #F5A623; }
 
+  .activity-list li {
+    align-items: flex-start;
+  }
+
+  .activity-message {
+    flex: 1;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
   .activity-time {
     margin-left: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
     font-size: 12px;
     color: var(--stone);
   }
@@ -913,18 +927,58 @@
     document.getElementById("overlay").classList.remove("open");
   });
 
-  // ===== LOAD DASHBOARD DATA =====
-  async function loadDashboard() {
-    try {
-      var response = await fetch("/api/dashboard/stats");
-      var data = await response.json();
-      //update stats
-      document.getElementById("statTotalItems").textContent = data.total_items || 0;
-      document.getElementById("statTotalValue").textContent = "₨ " + (data.total_value || 0).toLocaleString();
-      document.getElementById("statLowStock").textContent = data.low_stock_count || 0;
+  async function loadRecentActivities(){
+    const activityList = document.getElementById("activityList");
+    try{
+      const response = await fetch("/api/activities");
+      const activities = await response.json();
+      if(!response.ok){
+        throw new Error("could not load recent activities");
+      }
+      activityList.innerHTML = "";
+      if(activities.length === 0){
+        activityList.textContent = "No activities yet!";
+        return;
+      }
+      activities.forEach(function(activity){
+        const listItem = document.createElement("li");
 
-      // Today's sales (placeholder - you can implement this)
-      document.getElementById("statTodaySales").textContent = "₨ 0";
+        const dot = document.createElement("span");
+        dot.className = "activity-dot blue";
+
+        const message = document.createElement("span");
+        message.className = "activity-message"
+        message.textContent = `${activity.username} ${activity.details}`
+
+        const time = document.createElement("span");
+        time.className = "activity-time";
+        time.textContent = activity.timestamp;
+
+        listItem.append(dot, message, time)
+        activityList.appendChild(listItem);
+      })
+    }catch(error){
+      console.error("Could not reload recent activities", error);
+      activityList.textContent = "Could not load recent activity.";
+    }
+  }
+
+  // ===== LOAD DASHBOARD DATA =====
+  async function loadDashboard(start, end) {
+    try {
+      var query = new URLSearchParams({ start: start, end: end });
+      var response = await fetch("/api/dashboard/stats?" + query.toString());
+      var data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Could not load dashboard statistics");
+      }
+
+      document.getElementById("statTotalValue").textContent =
+        "₨ " + data.total_sales_value.toLocaleString();
+      document.getElementById("statTodaySales").textContent =
+        data.total_sales_count.toLocaleString();
+      document.getElementById("statTotal").textContent = data.total_items.toLocaleString();
+      document.getElementById("statLowStock").textContent = data.low_stock_count.toLocaleString();
 
       // Show/hide alert banner
       var alertBanner = document.getElementById("alertBanner");
@@ -953,32 +1007,11 @@
       } else {
         lowStockList.innerHTML = '<div class="stock-item"><span class="stock-name" style="color: var(--ok);">✅ All items have healthy stock!</span><span></span></div>';
       }
-
-      // Update activity list with sample data
-      var activityList = document.getElementById("activityList");
-      var activities = [
-        { text: "admin sold 5x Banana", time: "2 min ago", color: "green" },
-        { text: "admin added 10x Apples", time: "15 min ago", color: "blue" },
-        { text: "admin sold 3x Mango", time: "1 hour ago", color: "green" },
-        { text: "admin sold 2x Avocado", time: "3 hours ago", color: "red" },
-        { text: "admin updated Peach stock", time: "5 hours ago", color: "orange" }
-      ];
-
-      var html = "";
-      for (var i = 0; i < activities.length; i++) {
-        var act = activities[i];
-        html += '<li>';
-        html += '<span class="activity-dot ' + act.color + '"></span>';
-        html += act.text;
-        html += '<span class="activity-time">' + act.time + '</span>';
-        html += '</li>';
-      }
-      activityList.innerHTML = html;
+      await loadRecentActivities();
     } catch (error) {
       console.error("Error loading dashboard:", error);
       document.getElementById("lowStockList").innerHTML = '<div class="stock-item"><span class="stock-name" style="color: var(--coral);">❌ Failed to load data</span><span></span></div>';
     }
-    await updateStats()
   }
 
   // ===== REFRESH FUNCTION =====
@@ -987,7 +1020,20 @@
     btn.innerHTML = '<span class="icon">⏳</span> Refreshing...';
     btn.disabled = true;
 
-    loadDashboard().then(function() {
+    var activeRange = document.querySelector('.preset-btn.active').dataset.range;
+    var refreshPromise;
+
+    if (activeRange === 'custom') {
+      refreshPromise = loadDashboard(
+        document.getElementById('startDate').value,
+        document.getElementById('endDate').value
+      );
+    } else {
+      var dates = getPresetDates(activeRange);
+      refreshPromise = loadDashboard(dates.start, dates.end);
+    }
+
+    refreshPromise.then(function() {
       btn.innerHTML = '<span class="icon">✅</span> Refreshed!';
       setTimeout(function() {
         btn.innerHTML = '<span class="icon">🔄</span> Refresh Data';
@@ -996,23 +1042,82 @@
     });
   }
 
-  // ===== LOAD ON PAGE LOAD =====
-  document.addEventListener("DOMContentLoaded", function() {
-    loadDashboard();
+  function formatDate(date) {
+    var year = date.getFullYear();
+    var month = String(date.getMonth() + 1).padStart(2, "0");
+    var day = String(date.getDate()).padStart(2, "0");
+    return year + "-" + month + "-" + day;
+  }
+
+  function getPresetDates(range) {
+    var end = new Date();
+    var start = new Date(end);
+
+    if (range === "month") {
+      start.setDate(1);
+    } else if (range === "7days") {
+      start.setDate(end.getDate() - 6);
+    } else if (range === "30days") {
+      start.setDate(end.getDate() - 29);
+    }
+
+    return { start: formatDate(start), end: formatDate(end) };
+  }
+
+  function loadPresetRange(range) {
+    var dates = getPresetDates(range);
+    loadDashboard(dates.start, dates.end);
+  }
+
+  // ======= SELECT TIMEFRAME =====
+  document.querySelectorAll('.preset-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.preset-btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+
+      var isCustom = btn.dataset.range === 'custom';
+      document.getElementById('startDate').disabled = !isCustom;
+      document.getElementById('endDate').disabled = !isCustom;
+
+      if (isCustom) {
+        var thisMonth = getPresetDates('month');
+        document.getElementById('startDate').value = thisMonth.start;
+        document.getElementById('endDate').value = thisMonth.end;
+        return;
+      }
+
+      loadPresetRange(btn.dataset.range);
+    });
   });
 
-  // =======SELECT TIMEFRAME =====  
-  document.querySelectorAll('.preset-btn').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    document.querySelectorAll('.preset-btn').forEach(function(b) {
-      b.classList.remove('active');
-    });
-    btn.classList.add('active');
-    let isCustom = btn.dataset.range === 'custom';
-    document.getElementById('startDate').disabled = !isCustom;
-    document.getElementById('endDate').disabled = !isCustom;
+  document.getElementById('applyDateRange').addEventListener('click', function() {
+    var activeRange = document.querySelector('.preset-btn.active').dataset.range;
+    if (activeRange !== 'custom') {
+      loadPresetRange(activeRange);
+      return;
+    }
+
+    var start = document.getElementById('startDate').value;
+    var end = document.getElementById('endDate').value;
+
+    if (!start || !end) {
+      alert('Please choose both a start date and an end date.');
+      return;
+    }
+    if (start > end) {
+      alert('The start date cannot be after the end date.');
+      return;
+    }
+
+    loadDashboard(start, end);
   });
-});
+
+  // ===== LOAD ON PAGE LOAD =====
+  document.addEventListener("DOMContentLoaded", function() {
+    loadPresetRange("month");
+  });
 
 async function updateStats() {
     try {
