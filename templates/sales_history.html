@@ -1,0 +1,823 @@
+﻿<!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales History</title>
+    <style>
+      :root {
+        --bg: #F8F9FA;
+        --surface: #FFFFFF;
+        --text: #2C3E50;
+        --stone: #95A5A6;
+        --stone-light: #ECF0F1;
+        --accent: #3498DB;
+        --ok: #27AE60;
+        --coral: #E74C3C;
+        --warning: #F39C12;
+        --transition: all 0.2s ease;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .page-header {
+        margin-bottom: 30px;
+      }
+
+      .page-header h1 {
+        font-size: 32px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      /* Date Filter Bar */
+      .filter-bar {
+        background: var(--surface);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      }
+
+      .filter-controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .preset-buttons {
+        display: flex;
+        gap: 10px;
+      }
+
+      .preset-btn {
+        padding: 8px 16px;
+        border: 1px solid var(--stone-light);
+        background: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: var(--transition);
+      }
+
+      .preset-btn.active {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+      }
+
+      .preset-btn:hover {
+        border-color: var(--accent);
+      }
+
+      .date-inputs {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .date-inputs input {
+        padding: 8px 12px;
+        border: 1px solid var(--stone-light);
+        border-radius: 6px;
+        font-size: 14px;
+      }
+
+      .btn-apply {
+        padding: 8px 20px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: var(--transition);
+      }
+
+      .btn-apply:hover {
+        opacity: 0.9;
+      }
+
+      /* Summary Cards */
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .summary-card {
+        background: var(--surface);
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: var(--transition);
+      }
+
+      .summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      }
+
+      .summary-card .icon {
+        font-size: 32px;
+        margin-bottom: 12px;
+      }
+
+      .summary-card .value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+
+      .summary-card .label {
+        font-size: 14px;
+        color: var(--stone);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .summary-card.revenue { border-left: 4px solid var(--ok); }
+      .summary-card.transactions { border-left: 4px solid var(--accent); }
+      .summary-card.average { border-left: 4px solid var(--warning); }
+      .summary-card.best { border-left: 4px solid var(--coral); }
+
+      /* Chart Cards */
+      .chart-card {
+        background: var(--surface);
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+      }
+
+      .chart-card h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: var(--text);
+      }
+
+      /* Daily Sales Chart */
+      .daily-chart {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        height: 200px;
+        gap: 8px;
+        padding: 10px 0;
+      }
+
+      .daily-bar-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .daily-bar {
+        width: 100%;
+        background: linear-gradient(to top, var(--accent), #5DADE2);
+        border-radius: 4px 4px 0 0;
+        min-height: 4px;
+        transition: var(--transition);
+        cursor: pointer;
+      }
+
+      .daily-bar:hover {
+        opacity: 0.8;
+      }
+
+      .daily-value {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .daily-label {
+        font-size: 11px;
+        color: var(--stone);
+        margin-top: 8px;
+      }
+
+      /* Top Items Chart */
+      .top-items-chart {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .top-item-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .top-item-name {
+        width: 100px;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      .top-item-bar-container {
+        flex: 1;
+        background: var(--stone-light);
+        border-radius: 8px;
+        height: 32px;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .top-item-value-external {
+        position: absolute;
+        left: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        z-index: 1;
+      }
+
+      .top-item-bar {
+        height: 100%;
+        background: linear-gradient(to right, var(--ok), #2ECC71);
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        color: white;
+        font-size: 13px;
+        font-weight: 600;
+        transition: var(--transition);
+        min-width: fit-content;
+      }
+
+      /* Sales Table */
+      .table-card {
+        background: var(--surface);
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        overflow: hidden;
+      }
+
+      .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--stone-light);
+      }
+
+      .table-header h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .btn-export {
+        padding: 8px 16px;
+        background: var(--ok);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: var(--transition);
+      }
+
+      .btn-export:hover {
+        opacity: 0.9;
+      }
+
+      .table-wrapper {
+        max-height: 500px;
+        overflow-y: auto;
+      }
+
+      .sales-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .sales-table thead {
+        position: sticky;
+        top: 0;
+        background: var(--stone-light);
+        z-index: 10;
+      }
+
+      .sales-table th {
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+        color: var(--stone);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .sales-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--stone-light);
+        font-size: 14px;
+      }
+
+      .sales-table tbody tr:hover {
+        background: var(--bg);
+      }
+
+      .sales-table .total-col {
+        font-weight: 600;
+        color: var(--ok);
+      }
+
+      .sales-table .time-col {
+        color: var(--stone);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+
+  <div class="container">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1>📊 Sales History</h1>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="filter-controls">
+        <div class="preset-buttons">
+          <button class="preset-btn" data-range="week">This Week</button>
+          <button class="preset-btn active" data-range="month">This Month</button>
+          <button class="preset-btn" data-range="30days">Last 30 Days</button>
+          <button class="preset-btn" data-range="custom">Custom</button>
+        </div>
+
+        <div class="date-inputs">
+          <input type="date" id="startDate" disabled>
+          <span>→</span>
+          <input type="date" id="endDate" disabled>
+          <button class="btn-apply" id="applyFilter" disabled>Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-grid">
+      <div class="summary-card revenue">
+        <div class="icon">💰</div>
+        <div class="value">₨ 45,680</div>
+        <div class="label">Total Revenue</div>
+      </div>
+
+      <div class="summary-card transactions">
+        <div class="icon">📦</div>
+        <div class="value">127</div>
+        <div class="label">Total Transactions</div>
+      </div>
+
+      <div class="summary-card average">
+        <div class="icon">📊</div>
+        <div class="value">₨ 360</div>
+        <div class="label">Average Sale</div>
+      </div>
+
+      <div class="summary-card best">
+        <div class="icon">🏆</div>
+        <div class="value">Mango</div>
+        <div class="label">Best Seller</div>
+      </div>
+    </div>
+
+    <!-- Daily Sales Chart -->
+    <div class="chart-card">
+      <h3>📈 Daily Sales Revenue</h3>
+      <div class="daily-chart">
+        <div class="daily-bar-group">
+          <div class="daily-value">₨3.2k</div>
+          <div class="daily-bar" style="height: 80px;"></div>
+          <div class="daily-label">Mon</div>
+        </div>
+        <div class="daily-bar-group">
+          <div class="daily-value">₨4.5k</div>
+          <div class="daily-bar" style="height: 110px;"></div>
+          <div class="daily-label">Tue</div>
+        </div>
+        <div class="daily-bar-group">
+          <div class="daily-value">₨5.8k</div>
+          <div class="daily-bar" style="height: 145px;"></div>
+          <div class="daily-label">Wed</div>
+        </div>
+        <div class="daily-bar-group">
+          <div class="daily-value">₨7.2k</div>
+          <div class="daily-bar" style="height: 180px;"></div>
+          <div class="daily-label">Thu</div>
+        </div>
+        <div class="daily-bar-group">
+          <div class="daily-value">₨6.1k</div>
+          <div class="daily-bar" style="height: 152px;"></div>
+          <div class="daily-label">Fri</div>
+        </div>
+        <div class="daily-bar-group">
+          <div class="daily-value">₨8.5k</div>
+          <div class="daily-bar" style="height: 200px;"></div>
+          <div class="daily-label">Sat</div>
+        </div>
+        <div class="daily-bar-group">
+          <div class="daily-value">₨10.4k</div>
+          <div class="daily-bar" style="height: 200px;"></div>
+          <div class="daily-label">Sun</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Items Chart -->
+    <div class="chart-card">
+      <h3>🏆 Top 5 Items by Revenue</h3>
+      <div class="top-items-chart">
+        <div class="top-item-row">
+          <div class="top-item-name">Mango</div>
+          <div class="top-item-bar-container">
+            <div class="top-item-bar" style="width: 100%;">₨ 12,450</div>
+          </div>
+        </div>
+        <div class="top-item-row">
+          <div class="top-item-name">Coconut</div>
+          <div class="top-item-bar-container">
+            <div class="top-item-bar" style="width: 85%;">₨ 10,200</div>
+          </div>
+        </div>
+        <div class="top-item-row">
+          <div class="top-item-name">Banana</div>
+          <div class="top-item-bar-container">
+            <div class="top-item-bar" style="width: 72%;">₨ 8,960</div>
+          </div>
+        </div>
+        <div class="top-item-row">
+          <div class="top-item-name">Plum</div>
+          <div class="top-item-bar-container">
+            <div class="top-item-bar" style="width: 60%;">₨ 7,320</div>
+          </div>
+        </div>
+        <div class="top-item-row">
+          <div class="top-item-name">Apple</div>
+          <div class="top-item-bar-container">
+            <div class="top-item-bar" style="width: 45%;">₨ 5,610</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sales Table -->
+    <div class="table-card">
+      <div class="table-header">
+        <h3>📋 Detailed Sales</h3>
+        <button class="btn-export">📥 Export CSV</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="sales-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Item</th>
+              <th>Quantity</th>
+              <th>Unit Price</th>
+              <th>Total</th>
+              <th>Sold By</th>
+            </tr>
+          </thead>
+          <tbody id="salesTableBody">
+            <tr>
+              <td class="time-col">2026-09-13 10:30:15</td>
+              <td>Mango</td>
+              <td>5</td>
+              <td>₨ 50</td>
+              <td class="total-col">₨ 250</td>
+              <td>king</td>
+            </tr>
+            <tr>
+              <td class="time-col">2026-09-13 09:15:42</td>
+              <td>Coconut</td>
+              <td>3</td>
+              <td>₨ 500</td>
+              <td class="total-col">₨ 1,500</td>
+              <td>king</td>
+            </tr>
+            <tr>
+              <td class="time-col">2026-09-12 16:45:22</td>
+              <td>Banana</td>
+              <td>10</td>
+              <td>₨ 22</td>
+              <td class="total-col">₨ 220</td>
+              <td>admin</td>
+            </tr>
+            <tr>
+              <td class="time-col">2026-09-12 14:20:10</td>
+              <td>Plum</td>
+              <td>8</td>
+              <td>₨ 234</td>
+              <td class="total-col">₨ 1,872</td>
+              <td>king</td>
+            </tr>
+            <tr>
+              <td class="time-col">2026-09-12 11:05:33</td>
+              <td>Apple</td>
+              <td>15</td>
+              <td>₨ 4</td>
+              <td class="total-col">₨ 60</td>
+              <td>admin</td>
+            </tr>
+            <tr>
+              <td class="time-col">2026-09-11 18:50:45</td>
+              <td>Watermelon</td>
+              <td>2</td>
+              <td>₨ 2</td>
+              <td class="total-col">₨ 4</td>
+              <td>king</td>
+            </tr>
+            <tr>
+              <td class="time-col">2026-09-11 15:30:18</td>
+              <td>Jackfruit</td>
+              <td>4</td>
+              <td>₨ 56</td>
+              <td class="total-col">₨ 224</td>
+              <td>admin</td>
+            </tr>
+            <tr>
+              <td class="time-col">2026-09-11 12:10:55</td>
+              <td>Mango</td>
+              <td>12</td>
+              <td>₨ 50</td>
+              <td class="total-col">₨ 600</td>
+              <td>king</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+  <script src="/static/script.js"></script>
+  <script>
+    let currentStartDate = "";
+    let currentEndDate = "";
+    // ===== DATE FORMATTING HELPER =====
+    function formatDate(date){
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`
+    }
+    // =====GET PRESENT DATE RANGE =====
+    function getPresentDates(range){
+        const end = new Date();
+        const start = new Date(end);
+        if(range === 'week'){
+            start.setDate(end.getDate() - 6);
+        }
+        else if(range === 'month'){
+            start.setDate(1);
+        }
+        else if(range === '30days'){
+            start.setDate(end.getDate() - 29);
+        }
+        return {start : formatDate(start), end : formatDate(end)};
+    }
+    // ===== LOAD SUMMARY CARDS =====
+    async function loadSummary(start, end){
+        try{
+            const response = await fetch(`/api/sales/summary?start=${start}&end=${end}`);
+            const data = await response.json();
+            if(!response.ok){
+                throw new Error(data.message || 'Failed to load summary');
+            }
+            document.querySelector('.summary-card.revenue .value').textContent = 
+                'Rs. ' + data.total_revenue.toLocaleString();
+            document.querySelector('.summary-card.transactions .value').textContent = 
+                data.total_transactions.toLocaleString();
+            document.querySelector('.summary-card.average .value').textContent = 
+                'Rs. ' + data.average_sale.toLocaleString();
+            document.querySelector('.summary-card.best .value').textContent = 
+                data.best_seller;
+        }catch(error){
+            console.error("Error loading summary:", error);
+        }
+    }
+
+    // ===== LOAD DAILY SALES CHART =====
+    async function loadDailyChart(start, end){
+        try{
+            const response = await fetch(`/api/sales/daily?start=${start}&end=${end}`);
+            const days = await response.json();
+            if(!response.ok){
+                throw new Error('failed to load daily chart');
+            }
+                    const chartContainer = document.querySelector('.daily-chart');
+        const maxRevenue = Math.max(...days.map(d => d.revenue),1);
+        const maxBarHeight = 200;
+
+        chartContainer.innerHTML = '';
+
+        days.forEach(day =>{
+            const barHeight = (day.revenue / maxRevenue) * maxBarHeight;
+
+            const barGroup = document.createElement("div");
+            barGroup.className = "daily-bar-group";
+
+            const value = document.createElement("div");
+            value.className = "daily-value";
+            value.textContent = 'Rs. ' + (day.revenue / 1000).toFixed(1) + 'k';
+
+            const bar = document.createElement("div");
+            bar.className = "daily-bar";
+            bar.style.height = barHeight + "px";
+
+            const label = document.createElement("div");
+            label.className = "daily-label";
+            label.textContent = day.day;
+
+            barGroup.append(value, bar, label);
+            chartContainer.appendChild(barGroup);
+        });
+        }catch(error){
+            console.error("Error loading Daily chart: ", error);
+        }
+    }
+
+    // ===== LOAD TOP ITEMS CHART =====
+    async function loadTopItems(start, end){
+        try{
+            const response = await fetch(`/api/sales/top-items?start=${start}&end=${end}`);
+            const items = await response.json();
+
+            if(!response.ok){
+                throw new Error("Failed to load top items");
+            }
+
+            const container = document.querySelector(".top-items-chart");
+            container.innerHTML = "";
+
+            if(items.length === 0){
+                container.textContent = "No sales data available";
+                return;
+            }
+            const maxRevenue = items[0].revenue;
+
+            items.forEach(item =>{
+                const percentage = (item.revenue / maxRevenue) * 100;
+
+                const row = document.createElement("div");
+                row.className = "top-item-row";
+
+                const name = document.createElement("div");
+                name.className = "top-item-name";
+                name.textContent = item.name;
+
+                const barContainer = document.createElement("div");
+                barContainer.className = "top-item-bar-container";
+
+                const bar = document.createElement("div");
+                bar.className = "top-item-bar";
+                bar.style.width = percentage + "%";
+                
+                // Show value inside or outside bar depending on width
+                if (percentage > 20) {
+                    bar.textContent = '₨ ' + item.revenue.toLocaleString();
+                } else {
+                    const externalLabel = document.createElement('span');
+                    externalLabel.className = 'top-item-value-external';
+                    externalLabel.textContent = '₨ ' + item.revenue.toLocaleString();
+                    barContainer.appendChild(externalLabel);
+                }
+
+                barContainer.appendChild(bar);
+                row.append(name, barContainer);
+                container.appendChild(row);
+            });
+        }catch(error){
+            console.error("Error loading top items: ", error);
+        }
+    }
+
+    // ===== LOAD SALES TABLE =====
+    async function loadSalesTable(start, end){
+        try{
+            const response = await fetch(`/api/sales/detailed?start=${start}&end=${end}`);
+            const sales = await response.json();
+
+            if(!response.ok){
+                throw new Error("Failed to load sales table");
+            }
+
+            const tbody = document.getElementById("salesTableBody");
+            tbody.innerHTML = "";
+
+            if (sales.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No sales found</td></tr>';
+                return;
+                }
+            
+                sales.forEach(sale =>{
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td class="time-col">${sale.timestamp}</td>
+                        <td>${sale.item_name}</td>
+                        <td>${sale.quantity}</td>
+                        <td>₨ ${sale.price.toLocaleString()}</td>
+                        <td class="total-col">₨ ${(sale.quantity * sale.price).toLocaleString()}</td>
+                        <td>${sale.sold_by}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+        }catch(error){
+            console.error("Error loading sales table: ", error);
+            document.getElementById("salesTableBody").innerHTML = 
+                '<tr><td colspan="6" style="text-align: center; color: var(--coral);">Failed to load sales</td></tr>';
+                }
+    }
+
+    // ===== LOAD ALL DATA FOR A DATA RANGE =====
+    function loadAllData(start, end){
+        currentStartDate = start;
+        currentEndDate = end;
+
+        loadSummary(start, end);
+        loadDailyChart(start, end);
+        loadTopItems(start, end);
+        loadSalesTable(start, end);
+    }
+
+
+    // Filter preset button logic
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+
+        const isCustom = this.dataset.range === 'custom';
+        document.getElementById('startDate').disabled = !isCustom;
+        document.getElementById('endDate').disabled = !isCustom;
+        document.getElementById('applyFilter').disabled = !isCustom;
+
+        if (!isCustom) {
+          const dates = getPresentDates(this.dataset.range);
+          loadAllData(dates.start, dates.end);
+        } else {
+          const dates = getPresentDates('month');
+          document.getElementById('startDate').value = dates.start;
+          document.getElementById('endDate').value = dates.end;
+        }
+      });
+    });
+
+    // ===== CUSTOM DATE FILTER APPLY BUTTON =====
+    document.getElementById("applyFilter").addEventListener('click', function(){
+        const start = document.getElementById("startDate").value;
+        const end = document.getElementById("endDate").value;
+
+        if(!start || !end){
+            alert("please select start and end dates");
+            return;
+        }
+
+        if(start > end){
+            alert("start date cannot be after end date");
+            return;
+        }
+        loadAllData(start, end);
+    });
+
+    // ===== LOAD DEFAULT DATA ON PAGE LOAD (THIS MONTH) =====
+    document.addEventListener('DOMContentLoaded', function(){
+        const dates = getPresentDates('month');
+        loadAllData(dates.start, dates.end);
+    });
+  </script>
+
+  </body>
+  </html>

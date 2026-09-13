@@ -763,7 +763,7 @@
     <div class="profile-role">Administrator</div>
   </div>
 
-  <a class="nav-link active" href="/">🏠 Home</a>
+  <a class="nav-link active" href="/inventory">🏠 Home</a>
   <a class="nav-link" href="/dashboard">📊 Dashboard</a>
   <a class="nav-link" href="/reports">📋 Reports</a>
   <a class="nav-link" href="/accountsetting">⚙️ Account settings</a>
@@ -841,7 +841,7 @@
           placeholder="🔍 Search items by name..."
         >
         <button class="filter-btn active" onclick="filterItems('all')">All</button>
-        <button class="filter-btn" onclick="filterItems('low')">⚠️ Low Stock</button>
+        <button class="filter-btn" onclick="filterItems('low')" id="filterSelect">⚠️ Low Stock</button>
       </div>
 
       <!-- Item List -->

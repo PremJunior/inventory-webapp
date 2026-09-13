@@ -88,7 +88,7 @@ form.addEventListener("submit", async (event) => {
         
         // Redirect after brief delay
         setTimeout(() => {
-            window.location.href = "/";
+            window.location.href = "/inventory";
         }, 600);
         
     } catch (error) {

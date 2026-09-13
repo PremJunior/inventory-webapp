@@ -82,11 +82,11 @@ document.querySelector("#addBtn")?.addEventListener("click", async () => {
 let params = new URLSearchParams(window.location.search);
 if (params.get("login") === "success") {
     showToast("Logged in Successfully");
-    history.replaceState({}, "", "/");
+    history.replaceState({}, "", "/inventory");
 }
 
 // ===== LOGOUT =====
-document.getElementById("logoutLink").addEventListener("click", async (event) => {
+document.getElementById("logoutLink")?.addEventListener("click", async (event) => {
     event.preventDefault();
     try {
         const response = await fetch("/api/logout", { method: "POST" });
@@ -417,4 +417,11 @@ document.addEventListener("DOMContentLoaded", function() {
         loadSalesHistory();
     }
     updateAuthLinks();
+    
+    // Apply low-stock filter if coming from dashboard
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('filter') === 'low-stock' && typeof filterItems === 'function') {
+        filterItems('low');
+        history.replaceState({}, '', '/inventory');
+    }
 });

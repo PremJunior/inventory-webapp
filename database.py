@@ -206,3 +206,31 @@ def get_recent_activities(limit = 5):
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+def get_sales_by_day(start_date, end_date):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT DATE(timestamp) AS sale_date,
+        SUM(quantity * price_at_sale) AS total_revenue
+        FROM sales
+        WHERE timestamp BETWEEN ? AND ?
+        GROUP BY DATE(timestamp)
+        ORDER BY sale_date ASC
+""",(start_date, end_date))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def get_activities_by_range(start_date, end_date):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, username, action, item_name, details, timestamp
+        FROM activity_log
+        WHERE DATE(timestamp) BETWEEN ? AND ?
+        ORDER BY id DESC
+""",(start_date, end_date))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows

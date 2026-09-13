@@ -1,0 +1,294 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StoreStock - Inventory Management</title>
+  <style>
+    :root {
+      --ink: #1B1F3B;
+      --paper: #F5F6FA;
+      --accent: #5B5FEF;
+      --accent-dark: #4448C7;
+      --coral: #E8543E;
+      --stone: #8B8FA8;
+      --ok: #22A06B;
+      --shadow-lg: 0 8px 32px rgba(27, 31, 59, 0.10);
+      --radius: 12px;
+      --transition: all 0.2s ease;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, sans-serif;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .logo span {
+      color: var(--coral);
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 16px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: var(--transition);
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid white;
+    }
+
+    .btn-secondary:hover {
+      background: white;
+      color: var(--accent);
+    }
+
+    .btn-primary {
+      background: white;
+      color: var(--accent);
+    }
+
+    .btn-primary:hover {
+      background: var(--paper);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Hero Section */
+    .hero {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 60px 20px;
+      color: white;
+    }
+
+    .hero h1 {
+      font-size: 56px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      line-height: 1.2;
+    }
+
+    .hero h1 span {
+      color: var(--coral);
+    }
+
+    .hero p {
+      font-size: 20px;
+      margin-bottom: 40px;
+      opacity: 0.9;
+      max-width: 600px;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 20px;
+    }
+
+    .btn-large {
+      padding: 16px 40px;
+      font-size: 18px;
+    }
+
+    /* Features */
+    .features {
+      background: var(--paper);
+      padding: 80px 40px;
+    }
+
+    .features h2 {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 60px;
+      color: var(--ink);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      background: white;
+      padding: 32px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+      transition: var(--transition);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 48px rgba(27, 31, 59, 0.15);
+    }
+
+    .feature-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+      font-size: 22px;
+      margin-bottom: 12px;
+      color: var(--ink);
+    }
+
+    .feature-card p {
+      color: var(--stone);
+      line-height: 1.6;
+    }
+
+    /* Footer */
+    .footer {
+      background: var(--ink);
+      color: white;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .footer p {
+      opacity: 0.7;
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 36px;
+      }
+
+      .hero p {
+        font-size: 16px;
+      }
+
+      .hero-buttons {
+        flex-direction: column;
+        width: 100%;
+        max-width: 300px;
+      }
+
+      .header {
+        padding: 16px 20px;
+      }
+
+      .header-buttons {
+        flex-direction: column;
+        gap: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">Store<span>Stock</span></div>
+    <div class="header-buttons">
+      <a href="/login" class="btn btn-secondary">Log In</a>
+      <a href="/signup" class="btn btn-primary">Sign Up</a>
+    </div>
+  </div>
+
+  <!-- Hero Section -->
+  <div class="hero">
+    <h1>Manage Your Inventory<br>with <span>Ease</span></h1>
+    <p>StoreStock helps you track inventory, manage sales, and grow your business—all in one simple platform.</p>
+    <div class="hero-buttons">
+      <a href="/signup" class="btn btn-primary btn-large">Get Started Free</a>
+      <a href="/login" class="btn btn-secondary btn-large">Log In</a>
+    </div>
+  </div>
+
+  <!-- Features Section -->
+  <div class="features">
+    <h2>Everything You Need to Run Your Store</h2>
+    <div class="features-grid">
+      
+      <div class="feature-card">
+        <div class="feature-icon">📦</div>
+        <h3>Inventory Tracking</h3>
+        <p>Keep track of all your items with real-time stock updates and low-stock alerts.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Sales Analytics</h3>
+        <p>View detailed sales reports, track revenue, and understand your best-selling items.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Quick Actions</h3>
+        <p>Add items, record sales, and update stock in seconds with our intuitive interface.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🕐</div>
+        <h3>Activity Log</h3>
+        <p>Track every change with a complete activity history of all inventory actions.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⚠️</div>
+        <h3>Low Stock Alerts</h3>
+        <p>Never run out of stock—get automatic notifications when items are running low.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h3>Works Everywhere</h3>
+        <p>Access your inventory from any device—desktop, tablet, or mobile.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>&copy; 2026 StoreStock. All rights reserved.</p>
+  </div>
+
+</body>
+</html>

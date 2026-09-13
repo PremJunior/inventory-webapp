@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Log</title>
+    <style>
+      /* Copy the CSS variables and basic styles from dashboard.html */
+      :root {
+        --bg: #F8F9FA;
+        --surface: #FFFFFF;
+        --text: #2C3E50;
+        --stone: #95A5A6;
+        --stone-light: #ECF0F1;
+        --accent: #3498DB;
+        --ok: #27AE60;
+        --coral: #E74C3C;
+        --transition: all 0.2s ease;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+      }
+
+      /* Add nav, header, card, table styles similar to dashboard */
+
+      .activity-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      .activity-table th,
+      .activity-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--stone-light);
+      }
+
+      .activity-table th {
+        background: var(--stone-light);
+        font-weight: 600;
+        color: var(--stone);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .activity-table tbody tr:hover {
+        background: var(--stone-light);
+      }
+
+      .date-filter {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .date-filter input {
+        padding: 8px 12px;
+        border: 1px solid var(--stone-light);
+        border-radius: 6px;
+        font-size: 14px;
+      }
+
+      .date-filter button {
+        padding: 8px 20px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .date-filter button:hover {
+        opacity: 0.9;
+      }
+    </style>
+  </head>
+  <body>
+
+  <!-- Copy sidebar and header from dashboard.html -->
+
+  <div class="main-content">
+    <div class="page-header">
+      <h1>Activity Log</h1>
+    </div>
+
+    <div class="card">
+      <div class="date-filter">
+        <label>From:</label>
+        <input type="date" id="startDate">
+
+        <label>To:</label>
+        <input type="date" id="endDate">
+
+        <button onclick="loadActivities()">Apply Filter</button>
+        <button onclick="clearFilter()">Show All</button>
+      </div>
+
+      <table class="activity-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Item</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody id="activityTableBody">
+          <tr>
+            <td colspan="5" style="text-align: center;">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="/static/script.js"></script>
+  <script>
+    async function loadActivities() {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+
+      let url = '/api/activities/all';
+      if (start && end) {
+        url += `?start=${start}&end=${end}`;
+      }
+
+      try {
+        const response = await fetch(url);
+        const activities = await response.json();
+
+        const tbody = document.getElementById('activityTableBody');
+        tbody.innerHTML = '';
+
+        if (activities.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No activities found</td></tr>';
+          return;
+        }
+
+        activities.forEach(function(activity) {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${activity.timestamp}</td>
+            <td>${activity.username}</td>
+            <td>${activity.action}</td>
+            <td>${activity.item_name}</td>
+            <td>${activity.details}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error loading activities:', error);
+        document.getElementById('activityTableBody').innerHTML =
+          '<tr><td colspan="5" style="text-align: center; color: var(--coral);">Failed to load activities</td></tr>';
+      }
+    }
+
+    function clearFilter() {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      loadActivities();
+    }
+
+    document.addEventListener('DOMContentLoaded', loadActivities);
+  </script>
+
+  </body>
+</html>
