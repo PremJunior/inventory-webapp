@@ -1,3 +1,27 @@
+﻿# Python
 __pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment secrets
+.env
+
+# Database (never commit user data)
+instance/
+*.db
+*.sqlite
+
+# IDE
 .vscode/
-*.json
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

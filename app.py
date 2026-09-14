@@ -1,13 +1,23 @@
-﻿from flask import Flask, render_template, jsonify, request, session, redirect, url_for
+import os
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for
+from config import DevConfig, ProdConfig
 import database as db
 from validation import validate_name, validate_stock, validate_value
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from datetime import datetime
+
 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 app = Flask(__name__)
-app.secret_key = "viuewhfu934hfewh82hjfdhw8r"
+
+if os.environ.get("FLASK_ENV") == "production":
+    app.config.from_object(ProdConfig)
+else:
+    app.config.from_object(DevConfig)
+
+app.secret_key = app.config["SECRET_KEY"]
+
 db.create_table()
 db.create_sales_table()
 db.create_users_table()

@@ -1,9 +1,14 @@
 import sqlite3
+import os
 from datetime import datetime
 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+DB_PATH = os.environ.get("DATABASE_PATH", "instance/inventory.db")
+
+
 def get_connection():
-    return sqlite3.connect("inventory.db")
+    os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
+    return sqlite3.connect(DB_PATH)
 
 def create_table():
     conn = get_connection()
