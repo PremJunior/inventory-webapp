@@ -252,6 +252,18 @@
     .topbar h1 { font-size: 20px; }
     .page-container { padding: 0 16px 40px; }
   }
+
+  .sales-preset-btn.active { background: var(--accent) !important; color: white !important; border-color: var(--accent) !important; }
+
+  @media print {
+    .sidebar, .sidebar-overlay, .topbar, .reports-grid, #reportsIntro { display: none !important; }
+    #inventoryReportView button, #salesReportView button, #lowStockReportView button { display: none !important; }
+    #inventoryReportView, #salesReportView, #lowStockReportView { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
+    body { background: white !important; }
+    .page-container { max-width: 100% !important; padding: 0 !important; }
+    thead { display: table-header-group; }
+    tr { page-break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
@@ -286,14 +298,14 @@
 <!-- ===== REPORTS CONTENT ===== -->
 <div class="page-container">
 
-  <div style="margin-bottom: 24px;">
+  <div id="reportsIntro" style="margin-bottom: 24px;">
     <p style="color: var(--stone); font-size: 14px; margin: 0;">View and generate reports for your store's inventory and sales.</p>
   </div>
 
   <div class="reports-grid">
 
     <!-- Report 1: Inventory Report -->
-    <a href="#" class="report-card" onclick="alert('Inventory report will be generated.')">
+    <a href="#" class="report-card" onclick="openInventoryReport(); return false;">
       <div class="report-icon">📦</div>
       <h3>Inventory Report</h3>
       <p>Complete list of all items with stock levels and values.</p>
@@ -304,7 +316,7 @@
     </a>
 
     <!-- Report 2: Sales Report -->
-    <a href="#" class="report-card" onclick="alert('Sales report will be generated.')">
+    <a href="#" class="report-card" onclick="openSalesReport(); return false;">
       <div class="report-icon">📊</div>
       <h3>Sales Report</h3>
       <p>Summary of all sales with revenue and quantity sold.</p>
@@ -315,7 +327,7 @@
     </a>
 
     <!-- Report 3: Low Stock Report -->
-    <a href="#" class="report-card" onclick="alert('Low stock report will be generated.')">
+    <a href="#" class="report-card" onclick="openLowStockReport(); return false;">
       <div class="report-icon">⚠️</div>
       <h3>Low Stock Report</h3>
       <p>Items with stock below threshold that need reordering.</p>
@@ -324,41 +336,151 @@
         <span class="badge">PDF</span>
       </div>
     </a>
+</div>
+<!-- INVENTORY REPORT VIEW -->
+<div id="inventoryReportView" style="display: none; margin-top: 32px; background: white; border: 1px solid
+  var(--stone-light); border-radius: 12px; padding: 24px;">
 
-    <!-- Report 4: Profit/Loss Report -->
-    <a href="#" class="report-card" onclick="alert('Profit/Loss report will be generated.')">
-      <div class="report-icon">💰</div>
-      <h3>Profit / Loss Report</h3>
-      <p>Financial overview of your store's performance.</p>
-      <div class="report-meta">
-        <span>Last updated: Today</span>
-        <span class="badge">PDF</span>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+      <div>
+        <h2 style="margin: 0; font-size: 18px;">Inventory Report</h2>
+        <p id="inventoryReportDate" style="margin: 4px 0 0; color: var(--stone); font-size: 13px;"></p>
       </div>
-    </a>
-
-    <!-- Report 5: Sales Summary -->
-    <a href="#" class="report-card" onclick="alert('Sales summary will be generated.')">
-      <div class="report-icon">📈</div>
-      <h3>Sales Summary</h3>
-      <p>Daily, weekly, and monthly sales breakdown.</p>
-      <div class="report-meta">
-        <span>Last updated: Today</span>
-        <span class="badge">PDF</span>
+      <div style="display: flex; gap: 8px;">
+        <button onclick="printInventoryReport()" style="background: var(--ink); color: white; border: none; padding: 8px
+        16px; border-radius: 8px; cursor: pointer; font-size: 13px;">Print PDF</button>
+        <button onclick="exportInventoryCSV()" style="background: white; color: var(--ink); border: 1px solid
+        var(--stone-light); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px;">Export CSV</
+        button>
+        <button onclick="closeInventoryReport()" style="background: var(--paper); border: 1px solid var(--stone-light);
+        padding: 8px 12px; border-radius: 8px; cursor: pointer;">✕</button>
       </div>
-    </a>
+    </div>
 
-    <!-- Report 6: Export Data -->
-    <a href="#" class="report-card" onclick="alert('Export data as CSV will be generated.')">
-      <div class="report-icon">📥</div>
-      <h3>Export Data</h3>
-      <p>Export inventory and sales data as CSV or Excel.</p>
-      <div class="report-meta">
-        <span>Last updated: Today</span>
-        <span class="badge">CSV</span>
+    <div style="overflow-x: auto;">
+      <table id="inventoryTable" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <thead>
+          <tr style="background: var(--paper); text-align: left;">
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">#</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Item Name</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Stock</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Unit Value</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Total Value</th>
+          </tr>
+        </thead>
+        <tbody id="inventoryTableBody">
+          <tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--stone);">Click Inventory Report to
+          load data</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="inventorySummary" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--stone-light);
+    display: flex; gap: 24px; font-size: 13px; color: var(--stone);"></div>
+
+</div>
+
+<!-- SALES REPORT VIEW -->
+<div id="salesReportView" style="display: none; margin-top: 32px; background: white; border: 1px solid var(--stone-
+  light); border-radius: 12px; padding: 24px;">
+
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+      <div>
+        <h2 style="margin: 0; font-size: 18px;">Sales Report</h2>
+        <p id="salesReportDate" style="margin: 4px 0 0; color: var(--stone); font-size: 13px;"></p>
       </div>
-    </a>
+      <div style="display: flex; gap: 8px;">
+        <button onclick="printSalesReport()" style="background: var(--ink); color: white; border: none; padding: 8px
+        16px; border-radius: 8px; cursor: pointer; font-size: 13px;">Print PDF</button>
+        <button onclick="exportSalesCSV()" style="background: white; color: var(--ink); border: 1px solid var(--stone-
+        light); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px;">Export CSV</button>
+        <button onclick="closeSalesReport()" style="background: var(--paper); border: 1px solid var(--stone-light);
+        padding: 8px 12px; border-radius: 8px; cursor: pointer;">✕</button>
+      </div>
+    </div>
 
-  </div>
+    <!-- Filter bar -->
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; padding: 12px;
+    background: var(--paper); border-radius: 8px;">
+      <div style="display: flex; gap: 6px;">
+        <button class="sales-preset-btn" data-range="today" style="padding: 6px 12px; border: 1px solid var(--stone-
+        light); background: white; border-radius: 6px; cursor: pointer; font-size: 13px;">Today</button>
+        <button class="sales-preset-btn" data-range="week" style="padding: 6px 12px; border: 1px solid var(--stone-
+        light); background: white; border-radius: 6px; cursor: pointer; font-size: 13px;">This Week</button>
+        <button class="sales-preset-btn active" data-range="month" style="padding: 6px 12px; border: 1px solid
+        var(--stone-light); background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size:
+        13px;">This Month</button>
+        <button class="sales-preset-btn" data-range="custom" style="padding: 6px 12px; border: 1px solid var(--stone-
+        light); background: white; border-radius: 6px; cursor: pointer; font-size: 13px;">Custom</button>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <input type="date" id="salesStartDate" disabled style="padding: 6px 10px; border: 1px solid var(--stone-light);
+        border-radius: 6px; font-size: 13px;">
+        <span style="font-size: 13px; color: var(--stone);">to</span>
+        <input type="date" id="salesEndDate" disabled style="padding: 6px 10px; border: 1px solid var(--stone-light);
+        border-radius: 6px; font-size: 13px;">
+        <button id="salesApplyBtn" disabled style="padding: 6px 14px; background: var(--accent); color: white; border:
+        none; border-radius: 6px; cursor: pointer; font-size: 13px;">Apply</button>
+      </div>
+    </div>
+
+    <!-- Summary strip -->
+    <div id="salesSummaryStrip" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom:
+    16px;"></div>
+
+    <!-- Table -->
+    <div style="overflow-x: auto;">
+      <table id="salesReportTable" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <thead>
+          <tr style="background: var(--paper); text-align: left;">
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Date/Time</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Item</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Qty</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Unit Price</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Total</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Sold By</th>
+          </tr>
+        </thead>
+        <tbody id="salesReportTableBody">
+          <tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--stone);">Click Sales Report to load
+          data</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+<!-- LOW STOCK REPORT VIEW -->
+<div id="lowStockReportView" style="display: none; margin-top: 32px; background: white; border: 1px solid var(--stone-light); border-radius: 12px; padding: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+      <div>
+        <h2 style="margin: 0; font-size: 18px;">Low Stock Report</h2>
+        <p id="lowStockReportDate" style="margin: 4px 0 0; color: var(--stone); font-size: 13px;"></p>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <label style="font-size: 13px; color: var(--stone);">Threshold:</label>
+        <input type="number" id="lowStockThreshold" value="10" min="1" style="width: 70px; padding: 6px 8px; border: 1px solid var(--stone-light); border-radius: 6px; font-size: 13px;">
+        <button onclick="printLowStockReport()" style="background: var(--ink); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px;">Print PDF</button>
+        <button onclick="exportLowStockCSV()" style="background: white; color: var(--ink); border: 1px solid var(--stone-light); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px;">Export CSV</button>
+        <button onclick="closeLowStockReport()" style="background: var(--paper); border: 1px solid var(--stone-light); padding: 8px 12px; border-radius: 8px; cursor: pointer;">X</button>
+      </div>
+    </div>
+    <div style="overflow-x: auto;">
+      <table id="lowStockTable" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <thead>
+          <tr style="background: var(--paper); text-align: left;">
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">#</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Item Name</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Stock</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Unit Value</th>
+            <th style="padding: 10px; border-bottom: 2px solid var(--stone-light);">Status</th>
+          </tr>
+        </thead>
+        <tbody id="lowStockTableBody">
+          <tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--stone);">Click Low Stock Report to load data</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="lowStockSummary" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--stone-light); display: flex; gap: 24px; font-size: 13px; color: var(--stone);"></div>
+</div>
 
 </div>
 
@@ -375,6 +497,223 @@
     document.getElementById("sidebar").classList.remove("open");
     document.getElementById("overlay").classList.remove("open");
   });
+
+  async function openInventoryReport(){
+    const view = document.getElementById("inventoryReportView");
+    const tbody = document.getElementById("inventoryTableBody");
+    const dateEl = document.getElementById("inventoryReportDate");
+    const summaryEl = document.getElementById("inventorySummary");
+
+    document.getElementById("salesReportView").style.display = "none";
+    document.getElementById("lowStockReportView").style.display = "none";
+    view.style.display = "block";
+    dateEl.textContent =  "Generated: " + new Date().toLocaleString();
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--stone);">Loading...</td></tr>';
+
+    try{
+      const res = await fetch("/api/items");
+      const items = await res.json();
+
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;">No items found</td></tr>';
+        summaryEl.innerHTML = "";
+        return;
+      }
+      let totalValue = 0;
+      tbody.innerHTML = "";
+      items.forEach((item, index) => {
+        const rowTotal = item.stock * item.value;
+        totalValue += rowTotal;
+        tbody.innerHTML += `
+          <tr style="border-bottom: 1px solid var(--stone-light);">
+            <td style="padding:10px;">${index + 1}</td>
+            <td style="padding:10px;">${item.name}</td>
+            <td style="padding:10px;">${item.stock}</td>
+            <td style="padding:10px;">Rs. ${item.value}</td>
+            <td style="padding:10px;">Rs. ${rowTotal.toLocaleString()}</td>
+          </tr>
+        `;
+      });
+
+      summaryEl.innerHTML = `<span><strong>Total Items:</strong> ${items.length}</span><span><strong>Total Inventory
+      Value:</strong> Rs. ${totalValue.toLocaleString()}</span>`;
+      view.scrollIntoView({ behavior: "smooth" });
+    }catch(error){
+      tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--coral);">Failed to load data</td></tr>';
+    }
+  }
+
+  function closeInventoryReport() {
+    document.getElementById("inventoryReportView").style.display = "none";
+  }
+
+  function printInventoryReport() {
+    window.print();
+  }
+
+﻿  // ===== SALES REPORT LOGIC =====
+  let salesCurrentStart = "";
+  let salesCurrentEnd = "";
+  function getSalesPresetDates(range){
+    const today = new Date();
+    const pad = n => String(n).padStart(2,"0");
+    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    if(range === "today"){ const s = fmt(today); return { start: s, end: s }; }
+    if(range === "week"){ const day = today.getDay(); const diff = day === 0 ? 6 : day - 1; const monday = new Date(today); monday.setDate(today.getDate() - diff); return { start: fmt(monday), end: fmt(today) }; }
+    if(range === "month"){ const first = new Date(today.getFullYear(), today.getMonth(), 1); return { start: fmt(first), end: fmt(today) }; }
+    return { start: fmt(today), end: fmt(today) };
+  }
+  async function loadSalesReportSummary(start, end){
+    const strip = document.getElementById("salesSummaryStrip");
+    strip.innerHTML = "<div style=\"color: var(--stone); font-size: 13px;\">Loading summary...</div>";
+    try{
+      const res = await fetch(`/api/sales/summary?start=${start}&end=${end}`);
+      const data = await res.json();
+      if(!res.ok){ strip.innerHTML = `<div style="color: var(--coral); font-size: 13px;">${data.message || "Failed"}</div>`; return; }
+      strip.innerHTML = `
+        <div style="background: var(--paper); padding: 12px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; color: var(--stone); text-transform: uppercase; letter-spacing: 0.5px;">Total Revenue</div>
+          <div style="font-size: 16px; font-weight: 700; margin-top: 4px;">Rs. ${(data.total_revenue||0).toLocaleString()}</div>
+        </div>
+        <div style="background: var(--paper); padding: 12px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; color: var(--stone); text-transform: uppercase; letter-spacing: 0.5px;">Transactions</div>
+          <div style="font-size: 16px; font-weight: 700; margin-top: 4px;">${data.total_transactions||0}</div>
+        </div>
+        <div style="background: var(--paper); padding: 12px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; color: var(--stone); text-transform: uppercase; letter-spacing: 0.5px;">Avg Sale</div>
+          <div style="font-size: 16px; font-weight: 700; margin-top: 4px;">Rs. ${(data.average_sale||0).toLocaleString()}</div>
+        </div>
+        <div style="background: var(--paper); padding: 12px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; color: var(--stone); text-transform: uppercase; letter-spacing: 0.5px;">Best Seller</div>
+          <div style="font-size: 16px; font-weight: 700; margin-top: 4px;">${data.best_seller||"N/A"}</div>
+        </div>`;
+    }catch(e){ strip.innerHTML = "<div style=\"color: var(--coral); font-size: 13px;\">Failed to load summary</div>"; }
+  }
+  async function loadSalesReportTable(start, end){
+    const tbody = document.getElementById("salesReportTableBody");
+    tbody.innerHTML = "<tr><td colspan=\"6\" style=\"padding:20px;text-align:center;color:var(--stone);\">Loading...</td></tr>";
+    try{
+      const res = await fetch(`/api/sales/detailed?start=${start}&end=${end}`);
+      const sales = await res.json();
+      if(!res.ok){ tbody.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--coral);">${sales.message||"Failed"}</td></tr>`; return; }
+      if(!sales.length){ tbody.innerHTML = "<tr><td colspan=\"6\" style=\"padding:20px;text-align:center;color:var(--stone);\">No sales in this period</td></tr>"; return; }
+      tbody.innerHTML = "";
+      sales.forEach(s => {
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid var(--stone-light)";
+        tr.innerHTML = `<td style="padding:10px;">${s.timestamp}</td><td style="padding:10px;">${s.item_name}</td><td style="padding:10px;">${s.quantity}</td><td style="padding:10px;">Rs. ${s.price}</td><td style="padding:10px;">Rs. ${(s.quantity*s.price).toLocaleString()}</td><td style="padding:10px;">${s.sold_by}</td>`;
+        tbody.appendChild(tr);
+      });
+    }catch(e){ tbody.innerHTML = "<tr><td colspan=\"6\" style=\"padding:20px;text-align:center;color:var(--coral);\">Failed to load sales</td></tr>"; }
+  }
+  function loadSalesReportData(start, end){
+    salesCurrentStart = start; salesCurrentEnd = end;
+    document.getElementById("salesReportDate").textContent = `Range: ${start} to ${end}  |  Generated: ${new Date().toLocaleString()}`;
+    loadSalesReportSummary(start, end);
+    loadSalesReportTable(start, end);
+  }
+  async function openSalesReport(){
+    document.getElementById("inventoryReportView").style.display = "none";
+    const low = document.getElementById("lowStockReportView"); if(low) low.style.display = "none";
+    const view = document.getElementById("salesReportView");
+    view.style.display = "block";
+    document.querySelectorAll(".sales-preset-btn").forEach(b=>b.classList.remove("active"));
+    const monthBtn = document.querySelector(".sales-preset-btn[data-range=\"month\"]");
+    if(monthBtn) monthBtn.classList.add("active");
+    const dates = getSalesPresetDates("month");
+    document.getElementById("salesStartDate").value = dates.start;
+    document.getElementById("salesEndDate").value = dates.end;
+    document.getElementById("salesStartDate").disabled = true;
+    document.getElementById("salesEndDate").disabled = true;
+    document.getElementById("salesApplyBtn").disabled = true;
+    loadSalesReportData(dates.start, dates.end);
+    view.scrollIntoView({ behavior: "smooth" });
+  }
+  function closeSalesReport(){ document.getElementById("salesReportView").style.display = "none"; }
+  function printSalesReport(){ window.print(); }
+  function exportSalesCSV(){
+    const rows = document.querySelectorAll("#salesReportTable tr");
+    if(rows.length <= 1){ alert("No data to export. Open the report first."); return; }
+    let csv = "\uFEFF";
+    rows.forEach(row=>{
+      const cols = row.querySelectorAll("th, td");
+      const line = Array.from(cols).map(c=>{ const text = c.textContent.trim().replace(/"/g,"\"\""); return `"${text}"`; }).join(",");
+      csv += line + "\r\n";
+    });
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url;
+    const ds = salesCurrentStart && salesCurrentEnd ? `${salesCurrentStart}_to_${salesCurrentEnd}` : new Date().toISOString().split('T')[0];
+    a.download = `sales_report_${ds}.csv`; a.click(); URL.revokeObjectURL(url);
+  }
+  async function openLowStockReport(){
+    document.getElementById("inventoryReportView").style.display = "none";
+    document.getElementById("salesReportView").style.display = "none";
+    const view = document.getElementById("lowStockReportView");
+    const tbody = document.getElementById("lowStockTableBody");
+    const summaryEl = document.getElementById("lowStockSummary");
+    const dateEl = document.getElementById("lowStockReportDate");
+    const thresholdInput = document.getElementById("lowStockThreshold");
+    let threshold = parseInt(thresholdInput.value,10); if(isNaN(threshold)||threshold<1) threshold=10;
+    view.style.display = "block";
+    dateEl.textContent = "Generated: " + new Date().toLocaleString() + "  |  Threshold: < " + threshold;
+    tbody.innerHTML = "<tr><td colspan=\"5\" style=\"padding:20px;text-align:center;color:var(--stone);\">Loading...</td></tr>";
+    try{
+      const res = await fetch("/api/items"); const items = await res.json();
+      const filtered = items.filter(it => it.stock < threshold);
+      if(!filtered.length){ tbody.innerHTML = `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--stone);">No low stock items (threshold ${threshold})</td></tr>`; summaryEl.textContent = `All items are above threshold (${threshold})`; view.scrollIntoView({ behavior: "smooth" }); return; }
+      filtered.sort((a,b)=>a.stock-b.stock);
+      tbody.innerHTML = "";
+      filtered.forEach((item, idx)=>{
+        const status = item.stock === 0 ? "Out of Stock" : "Low Stock";
+        const color = item.stock===0 ? "var(--coral)" : "inherit";
+        const row = document.createElement("tr"); row.style.borderBottom = "1px solid var(--stone-light)";
+        row.innerHTML = `<td style="padding:10px;">${idx+1}</td><td style="padding:10px;">${item.name}</td><td style="padding:10px; color:${color}; font-weight:600;">${item.stock}</td><td style="padding:10px;">Rs. ${item.value}</td><td style="padding:10px;">${status}</td>`;
+        tbody.appendChild(row);
+      });
+      const outOfStock = filtered.filter(i=>i.stock===0).length;
+      summaryEl.innerHTML = `<span><strong>Low Stock Items:</strong> ${filtered.length}</span><span><strong>Out of Stock:</strong> ${outOfStock}</span><span><strong>Need Reorder:</strong> ${filtered.length}</span>`;
+      view.scrollIntoView({ behavior: "smooth" });
+    }catch(e){ tbody.innerHTML = "<tr><td colspan=\"5\" style=\"padding:20px;text-align:center;color:var(--coral);\">Failed to load data</td></tr>"; }
+  }
+  function closeLowStockReport(){ document.getElementById("lowStockReportView").style.display = "none"; }
+  function printLowStockReport(){ window.print(); }
+  function exportLowStockCSV(){
+    const rows = document.querySelectorAll("#lowStockTable tr");
+    if(rows.length <= 1){ alert("No data to export. Open the report first."); return; }
+    let csv = "\uFEFF";
+    rows.forEach(row=>{ const cols = row.querySelectorAll("th, td"); const line = Array.from(cols).map(c=>{ const text = c.textContent.trim().replace(/"/g,"\"\""); return `"${text}"`; }).join(","); csv += line + "\r\n"; });
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"}); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `low_stock_report_${new Date().toISOString().split('T')[0]}.csv`; a.click(); URL.revokeObjectURL(url);
+  }
+
+
+  function exportInventoryCSV() {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const rows = document.querySelectorAll("#inventoryTable tr");
+    if (rows.length <= 1) {
+      alert("No data to export. Open the report first.");
+      return;
+    }
+    let csv = "\uFEFF"; // BOM so Excel shows UTF-8 correctly
+    rows.forEach(row => {
+      const cols = row.querySelectorAll("th, td");
+      const line = Array.from(cols).map(c => {
+        // escape quotes inside data by doubling them
+        const text = c.textContent.trim().replace(/"/g, '""');
+        return `"${text}"`;
+      }).join(",");
+      csv += line + "\r\n"; // \r\n for Excel
+    });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `inventory_report_${dateStr}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  
 </script>
 
 </body>
