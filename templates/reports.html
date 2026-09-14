@@ -487,6 +487,8 @@
 <!-- ===== SCRIPTS ===== -->
 <script src="/static/auth.js"></script>
 <script>
+</script>
+<script>
   // Hamburger menu
   document.getElementById("hamburger").addEventListener("click", function() {
     document.getElementById("sidebar").classList.add("open");
@@ -676,6 +678,7 @@
       view.scrollIntoView({ behavior: "smooth" });
     }catch(e){ tbody.innerHTML = "<tr><td colspan=\"5\" style=\"padding:20px;text-align:center;color:var(--coral);\">Failed to load data</td></tr>"; }
   }
+  document.getElementById("lowStockThreshold")?.addEventListener("change", function(){ const v=document.getElementById("lowStockReportView"); if(v && v.style.display!=="none") openLowStockReport(); });
   function closeLowStockReport(){ document.getElementById("lowStockReportView").style.display = "none"; }
   function printLowStockReport(){ window.print(); }
   function exportLowStockCSV(){
@@ -714,6 +717,38 @@
   }
 
   
+
+  // Wire preset + apply listeners (runs after DOM is parsed since script is at bottom)
+  document.querySelectorAll(".sales-preset-btn").forEach(btn=>{
+    btn.addEventListener("click", function(){
+      document.querySelectorAll(".sales-preset-btn").forEach(b=>b.classList.remove("active"));
+      this.classList.add("active");
+      const range = this.dataset.range;
+      const isCustom = range === "custom";
+      document.getElementById("salesStartDate").disabled = !isCustom;
+      document.getElementById("salesEndDate").disabled = !isCustom;
+      document.getElementById("salesApplyBtn").disabled = !isCustom;
+      if(!isCustom){
+        const d = getSalesPresetDates(range);
+        document.getElementById("salesStartDate").value = d.start;
+        document.getElementById("salesEndDate").value = d.end;
+        loadSalesReportData(d.start, d.end);
+      } else {
+        const d = getSalesPresetDates("month");
+        document.getElementById("salesStartDate").value = d.start;
+        document.getElementById("salesEndDate").value = d.end;
+        document.getElementById("salesStartDate").focus();
+      }
+    });
+  });
+  document.getElementById("salesApplyBtn")?.addEventListener("click", function(){
+    const start = document.getElementById("salesStartDate").value;
+    const end = document.getElementById("salesEndDate").value;
+    if(!start || !end){ alert("Please select start and end dates"); return; }
+    if(start > end){ alert("Start date cannot be after end date"); return; }
+    loadSalesReportData(start, end);
+  });
+
 </script>
 
 </body>
