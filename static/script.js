@@ -269,7 +269,7 @@ function updateTodaySales(sales){
         let isToday = 
             saleDate.getFullYear() === today.getFullYear() &&
             saleDate.getMonth() === today.getMonth() &&
-            saleDate.getDay() === today.getDay();
+            saleDate.getDate() === today.getDate();
         return isToday? sum + (sale.quantity * sale.price) : sum;
     }, 0)
     todaySales.textContent = "Rs." + todayTotal.toLocaleString();
@@ -305,8 +305,8 @@ async function loadSalesHistory() {
                 <div class="sale-time">${sale.timestamp}</div>
             `;
             salesList.appendChild(li);
-            updateTodaySales(result);
         });
+        updateTodaySales(result);
     } catch (error) {
         console.log("Error loading sales: ", error);
     }
