@@ -408,7 +408,7 @@
         <button class="sales-preset-btn" data-range="week" style="padding: 6px 12px; border: 1px solid var(--stone-
         light); background: white; border-radius: 6px; cursor: pointer; font-size: 13px;">This Week</button>
         <button class="sales-preset-btn active" data-range="month" style="padding: 6px 12px; border: 1px solid
-        var(--stone-light); background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size:
+        var(--stone-light); background: white; border-radius: 6px; cursor: pointer; font-size:
         13px;">This Month</button>
         <button class="sales-preset-btn" data-range="custom" style="padding: 6px 12px; border: 1px solid var(--stone-
         light); background: white; border-radius: 6px; cursor: pointer; font-size: 13px;">Custom</button>
@@ -561,7 +561,7 @@
     const pad = n => String(n).padStart(2,"0");
     const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     if(range === "today"){ const s = fmt(today); return { start: s, end: s }; }
-    if(range === "week"){ const day = today.getDay(); const diff = day === 0 ? 6 : day - 1; const monday = new Date(today); monday.setDate(today.getDate() - diff); return { start: fmt(monday), end: fmt(today) }; }
+    if(range === "week"){ const startW = new Date(today); startW.setDate(today.getDate() - 6); return { start: fmt(startW), end: fmt(today) }; }
     if(range === "month"){ const first = new Date(today.getFullYear(), today.getMonth(), 1); return { start: fmt(first), end: fmt(today) }; }
     return { start: fmt(today), end: fmt(today) };
   }
