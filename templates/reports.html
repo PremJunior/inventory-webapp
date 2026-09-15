@@ -253,7 +253,32 @@
     .page-container { padding: 0 16px 40px; }
   }
 
-  .sales-preset-btn.active { background: var(--accent) !important; color: white !important; border-color: var(--accent) !important; }
+  .sales-preset-btn {
+    padding: 10px 16px;
+    border: 1px solid var(--stone-light);
+    border-radius: 10px;
+    background: white;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .sales-preset-btn:hover {
+    border-color: var(--accent);
+    background: #F0F0FF;
+  }
+  .sales-preset-btn.active {
+    background: var(--accent) !important;
+    color: white !important;
+    border-color: var(--accent) !important;
+  }
+  #salesApplyBtn {
+    padding: 10px 22px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
 
   @media print {
     .sidebar, .sidebar-overlay, .topbar, .reports-grid, #reportsIntro { display: none !important; }
@@ -402,16 +427,11 @@
     <!-- Filter bar -->
     <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; padding: 12px;
     background: var(--paper); border-radius: 8px;">
-      <div style="display: flex; gap: 6px;">
-        <button class="sales-preset-btn" data-range="today" style="padding: 6px 12px; border: 1px solid var(--stone-
-        light); background: white; border-radius: 6px; cursor: pointer; font-size: 13px;">Today</button>
-        <button class="sales-preset-btn" data-range="week" style="padding: 6px 12px; border: 1px solid var(--stone-
-        light); background: white; border-radius: 6px; cursor: pointer; font-size: 13px;">This Week</button>
-        <button class="sales-preset-btn active" data-range="month" style="padding: 6px 12px; border: 1px solid
-        var(--stone-light); background: white; border-radius: 6px; cursor: pointer; font-size:
-        13px;">This Month</button>
-        <button class="sales-preset-btn" data-range="custom" style="padding: 6px 12px; border: 1px solid var(--stone-
-        light); background: white; border-radius: 6px; cursor: pointer; font-size: 13px;">Custom</button>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="sales-preset-btn" data-range="today">Today</button>
+        <button class="sales-preset-btn" data-range="week">This Week</button>
+        <button class="sales-preset-btn active" data-range="month">This Month</button>
+        <button class="sales-preset-btn" data-range="custom">Custom</button>
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
         <input type="date" id="salesStartDate" disabled style="padding: 6px 10px; border: 1px solid var(--stone-light);
@@ -419,8 +439,8 @@
         <span style="font-size: 13px; color: var(--stone);">to</span>
         <input type="date" id="salesEndDate" disabled style="padding: 6px 10px; border: 1px solid var(--stone-light);
         border-radius: 6px; font-size: 13px;">
-        <button id="salesApplyBtn" disabled style="padding: 6px 14px; background: var(--accent); color: white; border:
-        none; border-radius: 6px; cursor: pointer; font-size: 13px;">Apply</button>
+        <button id="salesApplyBtn" disabled style="padding: 10px 22px; background: var(--accent); color: white; border:
+        none; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600;">Apply</button>
       </div>
     </div>
 
@@ -447,6 +467,7 @@
         </tbody>
       </table>
     </div>
+</div>
 
 <!-- LOW STOCK REPORT VIEW -->
 <div id="lowStockReportView" style="display: none; margin-top: 32px; background: white; border: 1px solid var(--stone-light); border-radius: 12px; padding: 24px;">
@@ -637,9 +658,15 @@
     const rows = document.querySelectorAll("#salesReportTable tr");
     if(rows.length <= 1){ alert("No data to export. Open the report first."); return; }
     let csv = "\uFEFF";
-    rows.forEach(row=>{
+    rows.forEach((row, rowIdx)=>{
       const cols = row.querySelectorAll("th, td");
-      const line = Array.from(cols).map(c=>{ const text = c.textContent.trim().replace(/"/g,"\"\""); return `"${text}"`; }).join(",");
+      const line = Array.from(cols).map((c, colIdx)=>{
+        const text = c.textContent.trim().replace(/"/g,"\"\"");
+        if(rowIdx > 0 && colIdx === 0){
+          return `"=""${text}"""`;
+        }
+        return `"${text}"`;
+      }).join(",");
       csv += line + "\r\n";
     });
     const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
@@ -648,6 +675,7 @@
     const ds = salesCurrentStart && salesCurrentEnd ? `${salesCurrentStart}_to_${salesCurrentEnd}` : new Date().toISOString().split('T')[0];
     a.download = `sales_report_${ds}.csv`; a.click(); URL.revokeObjectURL(url);
   }
+
   async function openLowStockReport(){
     document.getElementById("inventoryReportView").style.display = "none";
     document.getElementById("salesReportView").style.display = "none";
@@ -679,6 +707,7 @@
     }catch(e){ tbody.innerHTML = "<tr><td colspan=\"5\" style=\"padding:20px;text-align:center;color:var(--coral);\">Failed to load data</td></tr>"; }
   }
   document.getElementById("lowStockThreshold")?.addEventListener("change", function(){ const v=document.getElementById("lowStockReportView"); if(v && v.style.display!=="none") openLowStockReport(); });
+  
   function closeLowStockReport(){ document.getElementById("lowStockReportView").style.display = "none"; }
   function printLowStockReport(){ window.print(); }
   function exportLowStockCSV(){
@@ -748,6 +777,7 @@
     if(start > end){ alert("Start date cannot be after end date"); return; }
     loadSalesReportData(start, end);
   });
+
 
 </script>
 
