@@ -86,6 +86,44 @@ def session_status():
     })
 
 
+@app.route("/api/me")
+@login_required
+def get_me():
+    username = session.get("username")
+    user = db.get_user_by_username(username)
+    if not user:
+          return jsonify({"message": "user not found"}), 404
+    # user is (id, username, password_hash, full_name, email, dob, created_at)
+    return jsonify({
+          "id": user[0],
+          "username": user[1],
+          "full_name": user[3],
+          "email": user[4],
+          "dob": user[5],
+          "created_at": user[6]
+      })
+
+@app.route("/api/change-password", methods=["POST"])
+@login_required
+def change_password():
+    data = request.get_json()
+    username = session.get("username")
+    old_password = data.get("old_password")
+    new_password = data.get("new_password")
+
+    if not old_password or not new_password:
+        return jsonify({"message": "old and new password required"}), 400
+    if len(new_password) < 6:
+        return jsonify({"message": "new password must be at least 6 characters"}), 400
+
+    user = db.get_user_by_username(username)
+    if not user or not check_password_hash(user[2], old_password):
+        return jsonify({"message": "old password is incorrect"}), 401
+
+    new_hash = generate_password_hash(new_password)
+    db.update_user_password(username, new_hash)
+    return jsonify({"message": "password updated"}), 200
+
 @app.route("/api/items")                                
 def get_items():
     rows = db.load_all_items()

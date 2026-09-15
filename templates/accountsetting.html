@@ -391,20 +391,22 @@
     <div class="form-row">
       <div class="form-group">
         <label for="fullName">Full Name</label>
-        <input type="text" id="fullName" placeholder="John Doe" value="Admin User">
+        <input type="text" id="fullName" placeholder="John Doe" value="">
       </div>
       <div class="form-group">
         <label for="username">Username</label>
-        <input type="text" id="username" placeholder="username" value="admin" disabled>
+        <input type="text" id="username" placeholder="username" value="" disabled>
       </div>
     </div>
 
     <div class="form-group">
       <label for="email">Email Address</label>
-      <input type="email" id="email" placeholder="admin@example.com" value="admin@store.com">
+      <input type="email" id="email" placeholder="admin@example.com" value="" disabled>
     </div>
 
-    <button class="btn btn-primary" onclick="showToast('Profile updated successfully!', 'success')">
+    <p id="memberSince" style="font-size:12px;color:var(--stone);margin:-8px 0 16px 0;"></p>
+
+    <button id="saveProfileBtn" class="btn btn-primary" onclick="showToast('Profile editing coming in next update', 'success')">
       💾 Save Changes
     </button>
   </div>
@@ -430,9 +432,10 @@
       </div>
     </div>
 
-    <button class="btn btn-primary" onclick="showToast('Password changed successfully!', 'success')">
+    <button id="updatePasswordBtn" class="btn btn-primary">
       🔑 Update Password
     </button>
+    <p id="passwordMsg" style="font-size:13px;margin-top:8px;"></p>
   </div>
 
   <!-- Preferences -->
@@ -504,6 +507,50 @@
       }, 300);
     }, 3000);
   }
+  // Load real profile from /api/me
+  async function loadProfile() {
+    try {
+      const res = await fetch("/api/me");
+      if (!res.ok) throw new Error("not logged in");
+      const user = await res.json();
+      document.getElementById("fullName").value = user.full_name || "";
+      document.getElementById("username").value = user.username || "";
+      document.getElementById("email").value = user.email || "";
+      const ms = document.getElementById("memberSince");
+      if (ms && user.created_at) ms.textContent = "Member since " + user.created_at + " \u2022 DOB: " + (user.dob || "\u2014");
+    } catch (e) {
+      showToast("Failed to load profile", "error");
+    }
+  }
+  loadProfile();
+
+  // password change - only success toasts
+  document.getElementById("updatePasswordBtn")?.addEventListener("click", async () => {
+    const oldPw = document.getElementById("currentPassword").value;
+    const newPw = document.getElementById("newPassword").value;
+    const confirmPw = document.getElementById("confirmPassword").value;
+    const msgEl = document.getElementById("passwordMsg");
+    msgEl.textContent = "";
+    msgEl.style.color = "var(--coral)";
+    if (!oldPw || !newPw || !confirmPw) { msgEl.textContent = "Please fill all password fields."; return; }
+    if (newPw !== confirmPw) { msgEl.textContent = "New password and confirm do not match."; return; }
+    if (newPw.length < 6) { msgEl.textContent = "New password must be at least 6 characters."; return; }
+    try {
+      const res = await fetch("/api/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ old_password: oldPw, new_password: newPw })
+      });
+      const data = await res.json();
+      if (!res.ok) { msgEl.textContent = data.message || "Failed to update password"; return; }
+      msgEl.style.color = "var(--ok)";
+      msgEl.textContent = "Password updated successfully!";
+      showToast("Password changed!", "success");
+      document.getElementById("currentPassword").value = "";
+      document.getElementById("newPassword").value = "";
+      document.getElementById("confirmPassword").value = "";
+    } catch (e) { msgEl.textContent = "Network error. Try again."; }
+  });
 </script>
 
 </body>

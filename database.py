@@ -239,3 +239,10 @@ def get_activities_by_range(start_date, end_date):
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+def update_user_password(username, new_pass_hash):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET password_hash = ? WHERE username = ?", (new_pass_hash, username))
+    conn.commit()
+    conn.close()

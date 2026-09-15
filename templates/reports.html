@@ -675,7 +675,7 @@
     const ds = salesCurrentStart && salesCurrentEnd ? `${salesCurrentStart}_to_${salesCurrentEnd}` : new Date().toISOString().split('T')[0];
     a.download = `sales_report_${ds}.csv`; a.click(); URL.revokeObjectURL(url);
   }
-
+  // ===== LOW STOCK REPORT =====
   async function openLowStockReport(){
     document.getElementById("inventoryReportView").style.display = "none";
     document.getElementById("salesReportView").style.display = "none";
