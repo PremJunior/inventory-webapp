@@ -259,6 +259,15 @@ def update_user_password(username, new_pass_hash):
     conn.commit()
     conn.close()
 
+def update_user_profile(username, full_name, email):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET full_name = ?, email = ? WHERE username = ?", (full_name, email, username))
+    conn.commit()
+    changed = cursor.rowcount > 0
+    conn.close()
+    return changed
+
 def get_all_users():
       conn = get_connection()
       cursor = conn.cursor()

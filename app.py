@@ -1,4 +1,4 @@
-import os
+﻿import os
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 from config import DevConfig, ProdConfig
 import database as db
@@ -79,18 +79,28 @@ def dashboard():
 @page_login_required
 def reports():
     return render_template("reports.html")
+
 @app.route("/accountsetting")
 @page_login_required
 def accountsetting():
     return render_template("accountsetting.html")
+
 @app.route("/activity_log")
 @page_login_required
 def activity_log_page():
     return render_template("activity_log.html")
+
 @app.route("/sales_history")
 @page_login_required
 def sales_history_page():
     return render_template("sales_history.html")
+
+@app.route("/admin")
+@admin_required
+def admin_page():
+    return render_template("admin.html")
+
+
 @app.route("/api/session-status", methods = ["GET"])
 def session_status():
     username = session.get("username")
@@ -241,9 +251,9 @@ def edit_item(name):
     if new_name != old_name:
       changes.append(f'changed name from {old_name} to {new_name}')
     if new_stock != old_stock:
-      changes.append(f"changed stock from {old_stock} to {new_stock}")
+      changes.append(f"changed {new_name}'s stock from {old_stock} to {new_stock}")
     if new_value != old_value:
-      changes.append(f"changed price from Rs. {old_value} to Rs. {new_value}")
+      changes.append(f"changed {new_name}'s price from Rs. {old_value} to Rs. {new_value}")
     if changes:
         db.record_activity(
             username,
@@ -578,10 +588,6 @@ def get_detailed_sales():
     result.sort(key=lambda x: x["id"], reverse=True)
     return jsonify(result)
 
-@app.route("/admin")
-@admin_required
-def admin_page():
-    return render_template("admin.html")
 
 @app.route("/api/admin/users")
 @admin_required

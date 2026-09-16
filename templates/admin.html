@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User Management — StoreStock</title>
+<title>User Management</title>
 
 <style>
   /* ===== CSS VARIABLES ===== */
@@ -184,6 +184,21 @@
     align-items: center;
     gap: 12px;
   }
+
+  .btn-logout {
+    padding: 8px 16px;
+    border: 1px solid var(--stone-light);
+    border-radius: 10px;
+    background: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--coral);
+    transition: var(--transition);
+    font-family: inherit;
+  }
+
+  .btn-logout:hover { background: #FCEDEB; border-color: var(--coral); }
 
   .badge-admin {
     display: inline-flex;
@@ -737,9 +752,7 @@
   <a class="nav-link" href="/reports">📋 Reports</a>
   <a class="nav-link active" href="/admin">👥 Users</a>
   <a class="nav-link" href="/accountsetting">⚙️ Account settings</a>
-  <a class="nav-link" id="loginLink" href="/login">🔑 Log in</a>
-  <a class="nav-link" id="signupLink" href="/signup">✏️ Sign up</a>
-  <a class="nav-link" id="logoutLink" href="#" style="display: none;">🚪 Log Out</a>
+  <a class="nav-link" id="logoutLink" href="#">🚪 Log Out</a>
 </nav>
 
 <!-- ===== TOPBAR ===== -->
@@ -750,6 +763,7 @@
   </div>
   <div class="topbar-right">
     <span class="badge-admin">🔐 Admin Access</span>
+    <button id="topLogoutBtn" class="btn-logout"> Log Out</button>
   </div>
 </div>
 
@@ -776,7 +790,7 @@
       <div class="stat-icon seller">👤</div>
       <div class="stat-info">
         <div class="stat-value" id="statSellers">0</div>
-        <div class="stat-label">Seller</div>
+        <div class="stat-label">Sellers</div>
       </div>
     </div>
   </div>
@@ -804,19 +818,18 @@
       <table>
         <thead>
           <tr>
-            <th>ID</th>
             <th>USERNAME</th>
             <th>FULL NAME</th>
             <th>EMAIL</th>
-            <th>DATE OF BIRTH</th>
-            <th>CREATED AT</th>
+            <th>DOB</th>
             <th>ROLE</th>
-            <th style="text-align: right;">Actions</th>
+            <th>CREATED AT</th>
+            <th style="text-align: center;">Actions</th>
           </tr>
         </thead>
         <tbody id="usersTableBody">
           <tr>
-            <td colspan="6">
+            <td colspan="7">
               <div class="table-state">
                 <div class="icon">⏳</div>
                 <h3>Loading users...</h3>
@@ -852,16 +865,25 @@
 
 <script>
   // ===== STATE =====
-  const allUsers = [];
-  const currentFilter = "all";
-  const currentUser = null;
+  let allUsers = [];
+  let currentFilter = "all";
+  let currentUser = null;
 
   // ===== INIT =====
-  document.addEventListener("DOMContentLoaded", function () {
+  document.addEventListener("DOMContentLoaded", async function () {
     setupHamburger();
-    loadCurrentUser();
-    loadUsers();
+    setupTopLogout();
+    await loadCurrentUser();
+    await loadUsers();
   });
+
+  function setupTopLogout() {
+    document.getElementById("topLogoutBtn")?.addEventListener("click", async function (e) {
+      e.preventDefault();
+      try { await fetch("/api/logout", { method: "POST" }); } catch (err) { console.log("logout failed", err); }
+      window.location.href = "/login";
+    });
+  }
 
   // ===== HAMBURGER =====
   function setupHamburger() {
@@ -905,7 +927,7 @@
     } catch (err) {
       console.error("Load users error:", err);
       document.getElementById("usersTableBody").innerHTML =
-        '<tr><td colspan="6"><div class="table-state">' +
+        '<tr><td colspan="7"><div class="table-state">' +
         '<div class="icon">❌</div>' +
         '<h3>Failed to load users</h3>' +
         '<p>' + err.message + '</p>' +
@@ -933,14 +955,14 @@
       const matchesFilter = currentFilter === "all" || u.role === currentFilter;
       const matchesSearch = !search ||
         (u.username && u.username.toLowerCase().includes(search)) ||
-        (u.fullname && u.fullname.toLowerCase().includes(search)) ||
+        (u.full_name && u.full_name.toLowerCase().includes(search)) ||
         (u.email && u.email.toLowerCase().includes(search));
       return matchesFilter && matchesSearch;
     });
 
     if (filtered.length === 0) {
       tbody.innerHTML =
-        '<tr><td colspan="6"><div class="table-state">' +
+        '<tr><td colspan="7"><div class="table-state">' +
         '<div class="icon">🔍</div>' +
         '<h3>No users found</h3>' +
         '<p>Try adjusting your search or filter.</p>' +
@@ -951,7 +973,7 @@
     const isSelf = function (username) { return username === currentUser; };
 
     const html = filtered.map(function (u) {
-      const initials = getInitials(u.fullname || u.username);
+      const initials = getInitials(u.full_name || u.username);
       const avatarClass = u.role === "admin" ? "avatar admin" : "avatar";
       const roleBadgeClass = u.role === "admin" ? "role-badge admin" : "role-badge seller";
       const roleIcon = u.role === "admin" ? "🔐" : "👤";
@@ -961,7 +983,7 @@
       const selfTag = self ? '<span class="self-tag">You</span>' : '';
 
       // Promote button: only for sellers
-      const promoteBtn = u.role === "seller"
+      const promoteBtn = (u.role === "seller" && !self)
         ? '<button class="action-btn promote" onclick="confirmPromote(\'' + escapeAttr(u.username) + '\')">' +
           '⬆️ Promote</button>'
         : '';
@@ -982,20 +1004,27 @@
       return '<tr>' +
         '<td><div class="user-cell">' +
           '<div class="' + avatarClass + '">' + initials + '</div>' +
-          '<div class="user-meta">' +
-            '<div class="user-name">' + escapeHtml(u.fullname || u.username) + selfTag + '</div>' +
-            '<div class="user-sub">@' + escapeHtml(u.username) + '</div>' +
-          '</div>' +
+          '<span style="font-weight:600; white-space:nowrap;">@' + escapeHtml(u.username) + '</span>' + selfTag +
         '</div></td>' +
+        '<td style="white-space:nowrap;">' + escapeHtml(u.full_name || "—") + '</td>' +
         '<td>' + escapeHtml(u.email || "—") + '</td>' +
-        '<td>' + escapeHtml(u.dob || "—") + '</td>' +
+        '<td style="white-space:nowrap;">' + escapeHtml(u.dob || "—") + '</td>' +
         '<td><span class="' + roleBadgeClass + '">' + roleIcon + ' ' + roleLabel + '</span></td>' +
-        '<td>' + relativeTime(u.created_at) + '</td>' +
+        '<td style="white-space:nowrap;">' + formatDateTime(u.created_at) + '</td>' +
         '<td><div class="action-group">' + promoteBtn + revokeBtn + deleteBtn + '</div></td>' +
         '</tr>';
     }).join("");
 
     tbody.innerHTML = html;
+  }
+
+  function formatDateTime(ts) {
+    if (!ts) return "—";
+    try {
+      const d = new Date(ts.replace(" ", "T"));
+      if (isNaN(d.getTime())) return escapeHtml(ts);
+      return d.toLocaleString("en-US", { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit", hour12:true });
+    } catch(e) { return escapeHtml(ts); }
   }
 
   // ===== FILTERS =====
@@ -1185,3 +1214,10 @@
 
 </body>
 </html>
+
+
+
+
+
+
+
