@@ -207,7 +207,7 @@ def delete_item(name):
     db.delete_item_from_db(name)
     db.record_activity(
         username,
-        "ited_deleted",
+        "item_deleted",
         name,
         f"deleted {name}"
     )
@@ -244,7 +244,7 @@ def edit_item(name):
       changes.append(f"changed stock from {old_stock} to {new_stock}")
     if new_value != old_value:
       changes.append(f"changed price from Rs. {old_value} to Rs. {new_value}")
-      if(changes):
+    if changes:
         db.record_activity(
             username,
             "item_updated",
