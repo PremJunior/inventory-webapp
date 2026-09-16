@@ -1,4 +1,4 @@
-// ===== API REQUEST =====
+﻿// ===== API REQUEST =====
 async function apiRequest(url, options = {}) {
     try {
         let response = await fetch(url, options);
@@ -381,9 +381,13 @@ async function updateAuthLinks() {
         const loginLink = document.getElementById("loginLink");
         const signupLink = document.getElementById("signupLink");
         const logoutLink = document.getElementById("logoutLink");
+        const adminLink = document.getElementById("adminLink");
         const profileName = document.getElementById("profileName");
         const welcomeUser = document.getElementById("welcomeUser");
+        const profileRole = document.querySelector(".profile-role");
         const result = await response.json();
+        if (adminLink) adminLink.style.display = (result.logged_in && result.role === "admin") ? "block" : "none";
+        if (profileRole) profileRole.textContent = result.role === "admin" ? "Administrator" : (result.logged_in ? "Seller" : "Administrator");
         
         if (result.logged_in) {
             if (loginLink) loginLink.style.display = "none";

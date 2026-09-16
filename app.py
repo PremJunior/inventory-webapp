@@ -39,6 +39,19 @@ def page_login_required(func):
         return func(*args, **kwargs)
     return wrapper
 
+def admin_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login_page")) if request.path.startswith("/") and request.method == "GET" else (jsonify({"message" : "please login"}), 401)
+        user = db.get_user_by_username(session.get("username"))
+        if not user or user[7] != "admin":
+            # page request -> redirect, API request -> JSON 403
+            if request.path.startswith("/api/"):
+                return jsonify({"message" : "admin only"}), 403
+            return redirect(url_for("inventory"))
+        return func(*args, **kwargs)
+    return wrapper
 
 @app.route("/")
 def landing():
@@ -80,9 +93,15 @@ def sales_history_page():
     return render_template("sales_history.html")
 @app.route("/api/session-status", methods = ["GET"])
 def session_status():
+    username = session.get("username")
+    role = None
+    if username:
+        u = db.get_user_by_username(username)
+        role = u[7] if u else None
     return jsonify({
         "logged_in" : bool(session.get("logged_in")),
-        "username" : session.get("username")
+        "username" : username,
+        "role" : role
     })
 
 
@@ -93,14 +112,15 @@ def get_me():
     user = db.get_user_by_username(username)
     if not user:
           return jsonify({"message": "user not found"}), 404
-    # user is (id, username, password_hash, full_name, email, dob, created_at)
+    # user is (id, username, password_hash, full_name, email, dob, created_at, role)
     return jsonify({
           "id": user[0],
           "username": user[1],
           "full_name": user[3],
           "email": user[4],
           "dob": user[5],
-          "created_at": user[6]
+          "created_at": user[6],
+          "role" : user[7]
       })
 
 @app.route("/api/change-password", methods=["POST"])
@@ -557,6 +577,79 @@ def get_detailed_sales():
         })
     result.sort(key=lambda x: x["id"], reverse=True)
     return jsonify(result)
+
+@app.route("/admin")
+@admin_required
+def admin_page():
+    return render_template("admin.html")
+
+@app.route("/api/admin/users")
+@admin_required
+def admin_list_users():
+    rows = db.get_all_users()
+    users = []
+    for row in rows:
+        users.append({
+            "id" : row[0],
+            "username" : row[1],
+            "full_name" : row[2],
+            "email" : row[3],
+            "dob" : row[4],
+            "created_at" : row[5],
+            "role" : row[6]
+        })
+    return jsonify(users)
+
+@app.route("/api/admin/users/<username>/promote", methods=["POST"])
+@admin_required
+def admin_promote_user(username):
+    user = db.get_user_by_username(username)
+    if not user:
+        return jsonify({"message": "user not found"}), 404
+    if user[7] == "admin":
+        return jsonify({"message": "already admin"}), 400
+    db.update_user_role(username, "admin")
+    return jsonify({"message": "promoted"}), 200
+
+@app.route("/api/admin/users/<username>/revoke", methods=["POST"])
+@admin_required
+def admin_revoke_user(username):
+    if username == session.get("username"):
+        return jsonify({"message": "cannot revoke yourself"}), 400
+    user = db.get_user_by_username(username)
+    if not user:
+        return jsonify({"message": "user not found"}), 404
+    if user[7] != "admin":
+        return jsonify({"message": "not an admin"}), 400
+    all_users = db.get_all_users()
+    admins = [u for u in all_users if u[6] == "admin"]
+    if len(admins) <= 1:
+        return jsonify({"message": "cannot revoke last admin"}), 400
+    db.update_user_role(username, "seller")
+    return jsonify({"message": "revoked"}), 200
+
+@app.route("/api/admin/users/<int:user_id>", methods = ["DELETE"])
+@admin_required
+def admin_delete_user(user_id):
+    me = db.get_user_by_username(session.get("username"))
+    if me and me[0] == user_id:
+        return jsonify({"message" : "cannot delete yourself"}), 400
+    target = db.get_user_by_id(user_id)
+    if not target:
+        return jsonify({"message" : "user not found"}), 404
+    db.delete_user_by_id(user_id)
+    return jsonify({"message" : "user deleted"}), 200
+
+@app.route("/api/admin/users/<username>", methods=["DELETE"])
+@admin_required
+def admin_delete_user_by_name(username):
+    if username == session.get("username"):
+        return jsonify({"message": "cannot delete yourself"}), 400
+    user = db.get_user_by_username(username)
+    if not user:
+        return jsonify({"message": "user not found"}), 404
+    db.delete_user_by_id(user[0])
+    return jsonify({"message": "user deleted"}), 200
 
 if __name__ == "__main__": 
     app.run(debug=True)

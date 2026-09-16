@@ -133,20 +133,32 @@ def create_users_table():
             full_name TEXT NOT NULL,      
             email TEXT UNIQUE NOT NULL,  
             dob TEXT NOT NULL,            
-            created_at TEXT               
+            created_at TEXT,
+            role TEXT DEFAULT 'seller'               
         )
     """)
     conn.commit()
     conn.close()
+    ensure_role_column()
 
-def create_user(username, password_hash, full_name, email, dob, timestamp):
+def ensure_role_column():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(users)")
+    cols = [row[1] for row in cursor.fetchall()]
+    if "role" not in cols:
+        cursor.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'seller'")
+        conn.commit()
+    conn.close()
+
+def create_user(username, password_hash, full_name, email, dob, timestamp, role="seller"):
     conn = get_connection()
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            INSERT INTO users (username, password_hash, full_name, email, dob, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """, (username, password_hash, full_name, email, dob, timestamp))
+            INSERT INTO users (username, password_hash, full_name, email, dob, created_at, role)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (username, password_hash, full_name, email, dob, timestamp, role))
         conn.commit()
         return True
     except Exception as e:
@@ -158,7 +170,7 @@ def create_user(username, password_hash, full_name, email, dob, timestamp):
 def get_user_by_username(username):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, password_hash, full_name, email, dob, created_at FROM users WHERE username = ?", (username,))
+    cursor.execute("SELECT id, username, password_hash, full_name, email, dob, created_at, role FROM users WHERE username = ?", (username,))
     user = cursor.fetchone()
     conn.close()
     return user
@@ -166,7 +178,7 @@ def get_user_by_username(username):
 def get_user_by_email(email):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, password_hash, full_name, email, dob, created_at FROM users WHERE email = ?", (email,))
+    cursor.execute("SELECT id, username, password_hash, full_name, email, dob, created_at, role FROM users WHERE email = ?", (email,))
     user = cursor.fetchone()
     conn.close()
     return user
@@ -246,3 +258,38 @@ def update_user_password(username, new_pass_hash):
     cursor.execute("UPDATE users SET password_hash = ? WHERE username = ?", (new_pass_hash, username))
     conn.commit()
     conn.close()
+
+def get_all_users():
+      conn = get_connection()
+      cursor = conn.cursor()
+      cursor.execute("SELECT id, username, full_name, email, dob, created_at, role FROM users ORDER BY id ASC")
+      rows = cursor.fetchall()
+      conn.close()
+      return rows
+
+def get_user_by_id(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, full_name, email, dob, created_at, role FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+def delete_user_by_id(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return cursor.rowcount > 0
+
+def update_user_role(username, new_role):
+      if new_role not in ("admin", "seller"):
+          return False
+      conn = get_connection()
+      cursor = conn.cursor()
+      cursor.execute("UPDATE users SET role = ? WHERE username = ?", (new_role, username))
+      conn.commit()
+      changed = cursor.rowcount > 0
+      conn.close()
+      return changed

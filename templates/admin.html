@@ -1,0 +1,1187 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Management — StoreStock</title>
+
+<style>
+  /* ===== CSS VARIABLES ===== */
+  :root {
+    --ink: #1B1F3B;
+    --paper: #F5F6FA;
+    --accent: #5B5FEF;
+    --accent-dark: #4448C7;
+    --violet: #8B5FEF;
+    --coral: #E8543E;
+    --stone: #8B8FA8;
+    --stone-light: #E3E5F0;
+    --ok: #22A06B;
+    --mint: #3DE0C8;
+    --warn: #F5A623;
+    --shadow-sm: 0 2px 8px rgba(27, 31, 59, 0.06);
+    --shadow-md: 0 4px 16px rgba(27, 31, 59, 0.08);
+    --shadow-lg: 0 8px 32px rgba(27, 31, 59, 0.10);
+    --shadow-xl: 0 24px 60px rgba(27, 31, 59, 0.18);
+    --radius: 12px;
+    --radius-lg: 18px;
+    --transition: all 0.2s ease;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Segoe UI', -apple-system, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 260px;
+    background: var(--ink);
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 200;
+    padding: 24px 16px;
+    overflow-y: auto;
+  }
+
+  .sidebar.open { transform: translateX(0); }
+
+  .sidebar-brand {
+    color: white;
+    font-weight: 700;
+    font-size: 20px;
+    padding: 0 8px 24px;
+    letter-spacing: -0.5px;
+  }
+
+  .sidebar-brand span { color: var(--mint); }
+
+  .profile-card {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px 12px 24px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .profile-photo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .profile-name { color: white; font-weight: 700; font-size: 15px; }
+  .profile-role { color: #9EA3D1; font-size: 12px; margin-top: 2px; }
+
+  .nav-link {
+    display: block;
+    color: #C7CAE8;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 11px 12px;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .nav-link:hover { background: #262B52; color: white; }
+  .nav-link.active { background: #262B52; color: white; }
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(27, 31, 59, 0.45);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 190;
+  }
+
+  .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+
+  /* ===== TOPBAR ===== */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .hamburger {
+    background: white;
+    border: 1px solid var(--stone-light);
+    border-radius: 10px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: var(--transition);
+  }
+
+  .hamburger:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+
+  .hamburger div {
+    width: 16px;
+    height: 2px;
+    background: var(--ink);
+    position: relative;
+  }
+
+  .hamburger div::before,
+  .hamburger div::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 2px;
+    background: var(--ink);
+    left: 0;
+  }
+
+  .hamburger div::before { top: -5px; }
+  .hamburger div::after { top: 5px; }
+
+  .topbar h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, var(--ink), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .badge-admin {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #EEF0FF;
+    color: var(--accent);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* ===== PAGE CONTAINER ===== */
+  .page-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+  }
+
+  /* ===== STATS ROW ===== */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: white;
+    border: 1px solid var(--stone-light);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .stat-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .stat-icon.total { background: linear-gradient(135deg, #EEF0FF, #E0E3FF); }
+  .stat-icon.admins { background: linear-gradient(135deg, #FFF3E0, #FFE8C2); }
+  .stat-icon.seller { background: linear-gradient(135deg, #E4F7ED, #D0F0E0); }
+
+  .stat-info .stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+
+  .stat-info .stat-label {
+    font-size: 12px;
+    color: var(--stone);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+
+  /* ===== TOOLBAR ===== */
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .search-box {
+    flex: 1;
+    min-width: 240px;
+    position: relative;
+  }
+
+  .search-box input {
+    width: 100%;
+    padding: 12px 16px 12px 44px;
+    border: 1px solid var(--stone-light);
+    border-radius: 10px;
+    font-size: 14px;
+    background: white;
+    transition: var(--transition);
+    font-family: inherit;
+  }
+
+  .search-box input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-color: var(--accent);
+  }
+
+  .search-box .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: var(--stone);
+    pointer-events: none;
+  }
+
+  .filter-btn {
+    padding: 10px 18px;
+    border: 1px solid var(--stone-light);
+    border-radius: 10px;
+    background: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .filter-btn:hover { border-color: var(--accent); background: #F8F8FF; }
+
+  .filter-btn.active {
+    background: linear-gradient(135deg, var(--accent), var(--violet));
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(91, 95, 239, 0.3);
+  }
+
+  /* ===== USERS TABLE ===== */
+  .table-wrapper {
+    background: white;
+    border: 1px solid var(--stone-light);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  thead {
+    background: var(--paper);
+    border-bottom: 1px solid var(--stone-light);
+  }
+
+  th {
+    text-align: left;
+    padding: 14px 18px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--stone);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--stone-light);
+    vertical-align: middle;
+  }
+
+  tbody tr {
+    transition: background 0.15s ease;
+  }
+
+  tbody tr:hover { background: #FAFBFF; }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* ===== USER CELL ===== */
+  .user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 200px;
+  }
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    color: white;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), var(--violet));
+    text-transform: uppercase;
+  }
+
+  .avatar.admin {
+    background: linear-gradient(135deg, #F5A623, #E8543E);
+  }
+
+  .user-meta .user-name {
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .user-meta .user-sub {
+    font-size: 12px;
+    color: var(--stone);
+    margin-top: 2px;
+  }
+
+  /* ===== ROLE BADGE ===== */
+  .role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .role-badge.admin {
+    background: #FFF3E0;
+    color: #D97A00;
+  }
+
+  .role-badge.seller {
+    background: #E4F7ED;
+    color: var(--ok);
+  }
+
+  /* ===== ACTION BUTTONS ===== */
+  .action-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .action-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .action-btn.promote {
+    background: #FFF3E0;
+    color: #D97A00;
+    border-color: rgba(245, 166, 35, 0.3);
+  }
+
+  .action-btn.promote:hover {
+    background: linear-gradient(135deg, var(--warn), #E8952A);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3);
+  }
+
+  .action-btn.revoke {
+    background: #E4F7ED;
+    color: var(--ok);
+    border-color: rgba(34, 160, 107, 0.2);
+  }
+
+  .action-btn.revoke:hover {
+    background: linear-gradient(135deg, var(--ok), #1A8A5A);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 160, 107, 0.3);
+  }
+
+  .action-btn.delete {
+    background: #FCEDEB;
+    color: var(--coral);
+    border-color: rgba(232, 84, 62, 0.2);
+  }
+
+  .action-btn.delete:hover {
+    background: linear-gradient(135deg, var(--coral), #C0392B);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(232, 84, 62, 0.3);
+  }
+
+  .action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .action-btn:disabled:hover {
+    background: inherit;
+    color: inherit;
+  }
+
+  /* ===== SELF TAG ===== */
+  .self-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    background: #EEF0FF;
+    color: var(--accent);
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+  }
+
+  /* ===== EMPTY / LOADING ===== */
+  .table-state {
+    padding: 60px 24px;
+    text-align: center;
+    color: var(--stone);
+  }
+
+  .table-state .icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  .table-state h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+
+  .table-state p {
+    font-size: 14px;
+    color: var(--stone);
+  }
+
+  /* ===== MODAL ===== */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(27, 31, 59, 0.5);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    padding: 24px;
+  }
+
+  .modal-backdrop.open {
+    display: flex;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .modal {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: var(--shadow-xl);
+    animation: modalIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.94) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin-bottom: 18px;
+  }
+
+  .modal-icon.danger {
+    background: #FCEDEB;
+    color: var(--coral);
+  }
+
+  .modal-icon.warn {
+    background: #FFF3E0;
+    color: var(--warn);
+  }
+
+  .modal h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 10px;
+    letter-spacing: -0.3px;
+  }
+
+  .modal p {
+    font-size: 14px;
+    color: var(--stone);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .modal p strong {
+    color: var(--ink);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .modal-btn {
+    padding: 10px 22px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+    border: none;
+  }
+
+  .modal-btn.cancel {
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--stone-light);
+  }
+
+  .modal-btn.cancel:hover {
+    background: var(--stone-light);
+  }
+
+  .modal-btn.confirm-danger {
+    background: linear-gradient(135deg, var(--coral), #C0392B);
+    color: white;
+    box-shadow: 0 4px 12px rgba(232, 84, 62, 0.3);
+  }
+
+  .modal-btn.confirm-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(232, 84, 62, 0.4);
+  }
+
+  /* ===== TOASTS ===== */
+  .toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 400;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 360px;
+  }
+
+  .toast {
+    background: var(--ink);
+    color: white;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-left: 4px solid transparent;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(0); }
+  .toast.success { background: var(--ok); border-left-color: #1A8A5A; }
+  .toast.error { background: var(--coral); border-left-color: #C0392B; }
+  .toast.info { background: var(--accent); border-left-color: var(--accent-dark); }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 900px) {
+    .stats-row { grid-template-columns: 1fr; }
+    .topbar h1 { font-size: 20px; }
+    .page-container { padding: 0 16px 40px; }
+  }
+
+  @media (max-width: 700px) {
+    .table-scroll { overflow-x: auto; }
+    table { min-width: 800px; }
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .search-box { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar-overlay" id="overlay"></div>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">Store<span>Stock</span></div>
+
+  <div class="profile-card" id="profileCard">
+    <img class="profile-photo" src="/static/images/profilepic.webp" alt="Profile photo">
+    <div class="profile-name" id="profileName"></div>
+    <div class="profile-role">Administrator</div>
+  </div>
+
+  <a class="nav-link" href="/inventory">🏠 Home</a>
+  <a class="nav-link" href="/dashboard">📊 Dashboard</a>
+  <a class="nav-link" href="/reports">📋 Reports</a>
+  <a class="nav-link active" href="/admin">👥 Users</a>
+  <a class="nav-link" href="/accountsetting">⚙️ Account settings</a>
+  <a class="nav-link" id="loginLink" href="/login">🔑 Log in</a>
+  <a class="nav-link" id="signupLink" href="/signup">✏️ Sign up</a>
+  <a class="nav-link" id="logoutLink" href="#" style="display: none;">🚪 Log Out</a>
+</nav>
+
+<!-- ===== TOPBAR ===== -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="hamburger" id="hamburger"><div></div></div>
+    <h1>Admin Dashboard</h1>
+  </div>
+  <div class="topbar-right">
+    <span class="badge-admin">🔐 Admin Access</span>
+  </div>
+</div>
+
+<!-- ===== PAGE CONTENT ===== -->
+<div class="page-container">
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon total">👥</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statTotalUsers">0</div>
+        <div class="stat-label">Total Users</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon admins">🔐</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statAdmins">0</div>
+        <div class="stat-label">Admins</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon seller">👤</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statSellers">0</div>
+        <div class="stat-label">Seller</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search by username, name, or email...">
+    </div>
+    <button class="filter-btn active" data-filter="all" onclick="filterByRole('all')">
+      All Users
+    </button>
+    <button class="filter-btn" data-filter="admin" onclick="filterByRole('admin')">
+      🔐 Admins
+    </button>
+    <button class="filter-btn" data-filter="seller" onclick="filterByRole('seller')">
+      👤 Sellers
+    </button>
+  </div>
+
+  <!-- Users Table -->
+  <div class="table-wrapper">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>USERNAME</th>
+            <th>FULL NAME</th>
+            <th>EMAIL</th>
+            <th>DATE OF BIRTH</th>
+            <th>CREATED AT</th>
+            <th>ROLE</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <tr>
+            <td colspan="6">
+              <div class="table-state">
+                <div class="icon">⏳</div>
+                <h3>Loading users...</h3>
+                <p>Please wait while we fetch the user list.</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== CONFIRM MODAL ===== -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal">
+    <div class="modal-icon danger" id="modalIcon">⚠️</div>
+    <h3 id="modalTitle">Confirm Action</h3>
+    <p id="modalMessage">Are you sure?</p>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn confirm-danger" id="modalConfirmBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOASTS ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== SCRIPTS ===== -->
+<script src="/static/auth.js"></script>
+
+<script>
+  // ===== STATE =====
+  const allUsers = [];
+  const currentFilter = "all";
+  const currentUser = null;
+
+  // ===== INIT =====
+  document.addEventListener("DOMContentLoaded", function () {
+    setupHamburger();
+    loadCurrentUser();
+    loadUsers();
+  });
+
+  // ===== HAMBURGER =====
+  function setupHamburger() {
+    document.getElementById("hamburger").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.add("open");
+      document.getElementById("overlay").classList.add("open");
+    });
+    document.getElementById("overlay").addEventListener("click", function () {
+      document.getElementById("sidebar").classList.remove("open");
+      document.getElementById("overlay").classList.remove("open");
+    });
+  }
+
+  // ===== LOAD CURRENT USER (to prevent self-delete) =====
+  async function loadCurrentUser() {
+    try {
+      const res = await fetch("/api/session-status");
+      const data = await res.json();
+      currentUser = data.username;
+    } catch (err) {
+      console.log("Could not fetch current user:", err);
+    }
+  }
+
+  // ===== LOAD USERS =====
+  async function loadUsers() {
+    try {
+      const res = await fetch("/api/admin/users");
+      if (!res.ok) {
+        if (res.status === 403) {
+          showToast("Admin access required", "error");
+          setTimeout(function () { window.location.href = "/"; }, 1500);
+          return;
+        }
+        throw new Error("Failed to load users");
+      }
+      const data = await res.json();
+      allUsers = data.users || data;
+      renderStats();
+      renderUsers();
+    } catch (err) {
+      console.error("Load users error:", err);
+      document.getElementById("usersTableBody").innerHTML =
+        '<tr><td colspan="6"><div class="table-state">' +
+        '<div class="icon">❌</div>' +
+        '<h3>Failed to load users</h3>' +
+        '<p>' + err.message + '</p>' +
+        '</div></td></tr>';
+    }
+  }
+
+  // ===== RENDER STATS =====
+  function renderStats() {
+    const total = allUsers.length;
+    const admins = allUsers.filter(function (u) { return u.role === "admin"; }).length;
+    const sellers = total - admins;
+
+    document.getElementById("statTotalUsers").textContent = total;
+    document.getElementById("statAdmins").textContent = admins;
+    document.getElementById("statSellers").textContent = sellers;
+  }
+
+  // ===== RENDER USERS =====
+  function renderUsers() {
+    const search = document.getElementById("searchInput").value.trim().toLowerCase();
+    const tbody = document.getElementById("usersTableBody");
+
+    const filtered = allUsers.filter(function (u) {
+      const matchesFilter = currentFilter === "all" || u.role === currentFilter;
+      const matchesSearch = !search ||
+        (u.username && u.username.toLowerCase().includes(search)) ||
+        (u.fullname && u.fullname.toLowerCase().includes(search)) ||
+        (u.email && u.email.toLowerCase().includes(search));
+      return matchesFilter && matchesSearch;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML =
+        '<tr><td colspan="6"><div class="table-state">' +
+        '<div class="icon">🔍</div>' +
+        '<h3>No users found</h3>' +
+        '<p>Try adjusting your search or filter.</p>' +
+        '</div></td></tr>';
+      return;
+    }
+
+    const isSelf = function (username) { return username === currentUser; };
+
+    const html = filtered.map(function (u) {
+      const initials = getInitials(u.fullname || u.username);
+      const avatarClass = u.role === "admin" ? "avatar admin" : "avatar";
+      const roleBadgeClass = u.role === "admin" ? "role-badge admin" : "role-badge seller";
+      const roleIcon = u.role === "admin" ? "🔐" : "👤";
+      const roleLabel = u.role === "admin" ? "Admin" : "Seller";
+
+      const self = isSelf(u.username);
+      const selfTag = self ? '<span class="self-tag">You</span>' : '';
+
+      // Promote button: only for sellers
+      const promoteBtn = u.role === "seller"
+        ? '<button class="action-btn promote" onclick="confirmPromote(\'' + escapeAttr(u.username) + '\')">' +
+          '⬆️ Promote</button>'
+        : '';
+
+      // Revoke button: only for admins, and not for self
+      const revokeBtn = (u.role === "admin" && !self)
+        ? '<button class="action-btn revoke" onclick="confirmRevoke(\'' + escapeAttr(u.username) + '\')">' +
+          '⬇️ Revoke</button>'
+        : '';
+
+      // Delete button: not for self
+      const deleteBtn = !self
+        ? '<button class="action-btn delete" onclick="confirmDelete(\'' + escapeAttr(u.username) + '\')">' +
+          '🗑️ Delete</button>'
+        : '<button class="action-btn delete" disabled title="You cannot delete yourself">' +
+          '🗑️ Delete</button>';
+
+      return '<tr>' +
+        '<td><div class="user-cell">' +
+          '<div class="' + avatarClass + '">' + initials + '</div>' +
+          '<div class="user-meta">' +
+            '<div class="user-name">' + escapeHtml(u.fullname || u.username) + selfTag + '</div>' +
+            '<div class="user-sub">@' + escapeHtml(u.username) + '</div>' +
+          '</div>' +
+        '</div></td>' +
+        '<td>' + escapeHtml(u.email || "—") + '</td>' +
+        '<td>' + escapeHtml(u.dob || "—") + '</td>' +
+        '<td><span class="' + roleBadgeClass + '">' + roleIcon + ' ' + roleLabel + '</span></td>' +
+        '<td>' + relativeTime(u.created_at) + '</td>' +
+        '<td><div class="action-group">' + promoteBtn + revokeBtn + deleteBtn + '</div></td>' +
+        '</tr>';
+    }).join("");
+
+    tbody.innerHTML = html;
+  }
+
+  // ===== FILTERS =====
+  function filterByRole(role) {
+    currentFilter = role;
+    document.querySelectorAll(".filter-btn").forEach(function (btn) {
+      btn.classList.remove("active");
+    });
+    document.querySelector('.filter-btn[data-filter="' + role + '"]').classList.add("active");
+    renderUsers();
+  }
+
+  document.getElementById("searchInput").addEventListener("input", renderUsers);
+
+  // ===== ACTIONS =====
+  function confirmPromote(username) {
+    openModal({
+      icon: "⬆️",
+      iconClass: "warn",
+      title: "Promote to Admin?",
+      message: "<strong>@" + escapeHtml(username) + "</strong> will gain full admin access, including the ability to manage other users.",
+      confirmText: "Promote",
+      onConfirm: function () { promoteUser(username); }
+    });
+  }
+
+  function confirmRevoke(username) {
+    openModal({
+      icon: "⬇️",
+      iconClass: "warn",
+      title: "Revoke Admin Access?",
+      message: "<strong>@" + escapeHtml(username) + "</strong> will be demoted to seller and lose admin privileges.",
+      confirmText: "Revoke",
+      onConfirm: function () { revokeUser(username); }
+    });
+  }
+
+  function confirmDelete(username) {
+    openModal({
+      icon: "🗑️",
+      iconClass: "danger",
+      title: "Delete User?",
+      message: "This will permanently remove <strong>@" + escapeHtml(username) + "</strong> from the system. This action cannot be undone.",
+      confirmText: "Delete",
+      onConfirm: function () { deleteUser(username); }
+    });
+  }
+
+  // ===== API CALLS =====
+  async function promoteUser(username) {
+    try {
+      const res = await fetch("/api/admin/users/" + encodeURIComponent(username) + "/promote", {
+        method: "POST"
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to promote user");
+      showToast("@" + username + " promoted to admin", "success");
+      loadUsers();
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  }
+
+  async function revokeUser(username) {
+    try {
+      const res = await fetch("/api/admin/users/" + encodeURIComponent(username) + "/revoke", {
+        method: "POST"
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to revoke admin");
+      showToast("@" + username + " demoted to seller", "success");
+      loadUsers();
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  }
+
+  async function deleteUser(username) {
+    try {
+      const res = await fetch("/api/admin/users/" + encodeURIComponent(username), {
+        method: "DELETE"
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to delete user");
+      showToast("@" + username + " deleted", "success");
+      loadUsers();
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  }
+
+  // ===== MODAL =====
+  const modalConfirmHandler = null;
+
+  function openModal(opts) {
+    document.getElementById("modalIcon").textContent = opts.icon;
+    document.getElementById("modalIcon").className = "modal-icon " + (opts.iconClass || "danger");
+    document.getElementById("modalTitle").textContent = opts.title;
+    document.getElementById("modalMessage").innerHTML = opts.message;
+
+    const confirmBtn = document.getElementById("modalConfirmBtn");
+    confirmBtn.textContent = opts.confirmText || "Confirm";
+
+    // Replace handler by cloning the button to remove old listeners
+    const newBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+    newBtn.addEventListener("click", function () {
+      closeModal();
+      opts.onConfirm();
+    });
+
+    document.getElementById("confirmModal").classList.add("open");
+  }
+
+  function closeModal() {
+    document.getElementById("confirmModal").classList.remove("open");
+  }
+
+  // Close on backdrop click
+  document.getElementById("confirmModal").addEventListener("click", function (e) {
+    if (e.target === this) closeModal();
+  });
+
+  // Close on Escape
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeModal();
+  });
+
+  // ===== TOAST =====
+  function showToast(message, type) {
+    type = type || "info";
+    const container = document.getElementById("toastContainer");
+    const toast = document.createElement("div");
+    toast.className = "toast " + type;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    setTimeout(function () { toast.classList.add("show"); }, 10);
+    setTimeout(function () {
+      toast.classList.remove("show");
+      setTimeout(function () { toast.remove(); }, 300);
+    }, 3000);
+  }
+
+  // ===== HELPERS =====
+  function getInitials(name) {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+
+  function relativeTime(timestamp) {
+    if (!timestamp) return "—";
+    try {
+      const then = new Date(timestamp.replace(" ", "T"));
+      const now = new Date();
+      const diff = Math.floor((now - then) / 1000);
+      if (isNaN(diff)) return escapeHtml(timestamp);
+
+      if (diff < 60) return "Just now";
+      if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+      if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+      if (diff < 604800) return Math.floor(diff / 86400) + "d ago";
+      return then.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch (e) {
+      return escapeHtml(timestamp);
+    }
+  }
+
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function escapeAttr(str) {
+    return String(str).replace(/'/g, "\\'");
+  }
+</script>
+
+</body>
+</html>
