@@ -133,6 +133,30 @@ def get_me():
           "role" : user[7]
       })
 
+@app.route("/api/me", methods = {"PUT"})
+@login_required
+def update_me():
+    data = request.get_json()
+    username = session.get("username")
+    full_name = (data.get("full_name") or "").strip()
+    email = (data.get("email") or "").strip()
+
+    if not full_name or not email:
+        return jsonify({"message" : "fullname and email required"}), 400
+    if not validate_name(full_name):
+        return jsonify({"message" : "fullname must contain only letter and space"}), 400
+    if "@" not in email or "." not in email:
+        return jsonify({"message" : "invalid email format"}), 400
+
+    existing = db.get_user_by_email(email)
+    if existing and existing[1] != username:
+        return jsonify({"message" : "email already in use"}), 409
+
+    ok = db.update_user_profile(username, full_name, email)
+    if not ok:
+        return jsonify({"message" : "failed to update profile"}), 500
+    return jsonify({"message" : "profile updated"}), 200
+
 @app.route("/api/change-password", methods=["POST"])
 @login_required
 def change_password():

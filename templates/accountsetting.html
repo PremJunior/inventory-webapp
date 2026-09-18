@@ -402,13 +402,13 @@
 
     <div class="form-group">
       <label for="email">Email Address</label>
-      <input type="email" id="email" placeholder="admin@example.com" value="" disabled>
+      <input type="email" id="email" placeholder="admin@example.com" value="" >
     </div>
 
     <p id="memberSince" style="font-size:12px;color:var(--stone);margin:-8px 0 16px 0;"></p>
 
-    <button id="saveProfileBtn" class="btn btn-primary" onclick="showToast('Profile editing coming in next update', 'success')">
-      💾 Save Changes
+    <button id="saveProfileBtn" class="btn btn-primary">
+    💾 Save Changes
     </button>
   </div>
 
@@ -509,6 +509,53 @@
     }
   }
   loadProfile();
+
+  // update profile from /api/me PUT
+  document.getElementById("saveProfileBtn")?.addEventListener("click", async function(){
+    const button = document.getElementById("saveProfileBtn");
+    const fullName = document.getElementById("fullName").value.trim();
+    const email = document.getElementById("email").value.trim();
+
+    if(!fullName || !email){
+      showToast("Full name and email required.", "error");
+      return
+    }
+
+    button.disabled = true;
+    button.textContent = "Saving....";
+
+    try{
+      const response = await fetch("/api/me", {
+        method : "PUT",
+        headers : {
+          "Content-Type" : "application/json"
+        },
+        body : JSON.stringify({
+          full_name : fullName,
+          email : email
+        })
+      });
+
+      const data = await response.json();
+
+      if(!response.ok){
+        throw new Error(data.message || "could not update profile.");
+      }
+
+      showToast(data.message, "success");
+      const profileName = document.getElementById("profileName");
+
+      if (profileName) {
+        profileName.textContent = fullName;
+      }
+    }catch(error){
+      showToast(error.message, "error");
+    }finally{
+      button.disabled = false;
+      button.textContent = "💾 Save Changes";
+    }
+  });
+
 
   // password change - only success toasts
   document.getElementById("updatePasswordBtn")?.addEventListener("click", async () => {

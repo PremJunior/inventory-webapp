@@ -23,6 +23,12 @@
       if (nameEl && data.username) {
         nameEl.textContent = data.username;
       }
+      // loads profile block in the side navbar
+      const profileCard = document.getElementById("profileCard");
+
+      if (profileCard) {
+        profileCard.style.display = data.logged_in ? "flex" : "none";
+      }
     } catch (err) {
       console.log('auth check failed', err);
     }
@@ -37,3 +43,4 @@ document.getElementById('logoutLink')?.addEventListener('click', async (event) =
   }
   window.location.href = '/login';
 });
+
