@@ -12,20 +12,17 @@ def validate_name(name):
 
 
 
-def validate_stock(stock):
+def _is_non_negative_integer(value):
+    """Return whether a value can be stored as a non-negative whole number."""
     try:
-        stock = int(stock)
-        if stock < 0:
-            return False
-        return True
+        return int(value) >= 0
     except (ValueError, TypeError):
         return False
 
+
+def validate_stock(stock):
+    return _is_non_negative_integer(stock)
+
+
 def validate_value(value):
-    try:
-        value = int(value)
-        if value < 0:
-            return False
-        return True
-    except(ValueError, TypeError):
-        return False
+    return _is_non_negative_integer(value)

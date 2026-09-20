@@ -1,7 +1,6 @@
 import sqlite3
 import os
 from datetime import datetime
-timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 DB_PATH = os.environ.get("DATABASE_PATH", "instance/inventory.db")
 
@@ -142,6 +141,7 @@ def create_users_table():
     ensure_role_column()
 
 def ensure_role_column():
+    # Keep databases created before user roles were added compatible.
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("PRAGMA table_info(users)")
@@ -182,13 +182,7 @@ def get_user_by_email(email):
     user = cursor.fetchone()
     conn.close()
     return user
-# to delete directly from db
-def delete_users():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("DROP TABLE activity_log")
-    conn.commit()
-    conn.close()
+
 
 def get_sales_by_range(start, end):
     conn = get_connection()

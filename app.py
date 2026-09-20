@@ -5,9 +5,7 @@ import database as db
 from validation import validate_name, validate_stock, validate_value
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-from datetime import datetime
-
-timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -22,6 +20,56 @@ db.create_table()
 db.create_sales_table()
 db.create_users_table()
 db.create_activity_log_table()
+
+
+def serialize_item(item):
+    return {"name": item[0], "stock": item[1], "value": item[2]}
+
+
+def serialize_sale(sale, item_key="name", include_sold_by=False):
+    """Convert a sales database row into the API shape used by a page."""
+    sale_data = {
+        "id": sale[0],
+        item_key: sale[1],
+        "quantity": sale[2],
+        "price": sale[3],
+        "timestamp": sale[4],
+    }
+    if include_sold_by:
+        sale_data["sold_by"] = sale[5]
+    return sale_data
+
+
+def serialize_activity(activity):
+    return {
+        "id": activity[0],
+        "username": activity[1],
+        "action": activity[2],
+        "item_name": activity[3],
+        "details": activity[4],
+        "timestamp": activity[5],
+    }
+
+
+def get_requested_date_range():
+    """Read and validate the shared start/end query parameters for reports."""
+    start = request.args.get("start")
+    end = request.args.get("end")
+
+    if not start or not end:
+        return None, "A start and end date are required"
+
+    try:
+        start_date = datetime.strptime(start, "%Y-%m-%d")
+        end_date = datetime.strptime(end, "%Y-%m-%d")
+    except ValueError:
+        return None, "Dates must use the YYYY-MM-DD format"
+
+    if start_date > end_date:
+        return None, "The start date cannot be after the end date"
+
+    return (start_date, end_date), None
+
 
 def login_required(func):
     @wraps(func)
@@ -133,10 +181,10 @@ def get_me():
           "role" : user[7]
       })
 
-@app.route("/api/me", methods = {"PUT"})
+@app.route("/api/me", methods=["PUT"])
 @login_required
 def update_me():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     username = session.get("username")
     full_name = (data.get("full_name") or "").strip()
     email = (data.get("email") or "").strip()
@@ -180,15 +228,7 @@ def change_password():
 
 @app.route("/api/items")                                
 def get_items():
-    rows = db.load_all_items()
-    items_lst = []
-    for row in rows:
-        items_lst.append({
-            "name" : row[0],
-            "stock" : row[1],
-            "value" : row[2]
-        })
-    return jsonify(items_lst)
+    return jsonify([serialize_item(item) for item in db.load_all_items()])
 
 @app.route("/api/items", methods = ["POST"])             
 @login_required
@@ -317,17 +357,7 @@ def sell_item(name):
 
 @app.route("/api/sales", methods = ["GET"])
 def get_sales():
-    sales = db.get_all_sales()
-    sales_list = []
-    for sale in sales:
-        sales_list.append({
-            "id" : sale[0],
-            "name" : sale[1],
-            "quantity" : sale[2],
-            "price" : sale[3],
-            "timestamp" : sale[4]
-        })
-    return jsonify(sales_list)
+    return jsonify([serialize_sale(sale) for sale in db.get_all_sales()])
 
 @app.route("/api/login", methods = ["POST"])
 def login():
@@ -362,7 +392,8 @@ def signup():
         if existing_email:
             return jsonify({"message" : "email already registered"}), 400
         
-        if db.create_user(username, passwordhash, fullname, email, dob, timestamp):
+        created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if db.create_user(username, passwordhash, fullname, email, dob, created_at):
             session["logged_in"] = True
             session["username"] = username
             return jsonify({"message" : "signed up successfully"}), 200
@@ -383,20 +414,10 @@ def logout():
 @app.route("/api/dashboard/stats")
 @login_required
 def dashboard_stats():
-    start = request.args.get("start")
-    end = request.args.get("end")
-
-    if not start or not end:
-        return jsonify({"message": "A start and end date are required"}), 400
-
-    try:
-        start_date = datetime.strptime(start, "%Y-%m-%d")
-        end_date = datetime.strptime(end, "%Y-%m-%d")
-    except ValueError:
-        return jsonify({"message": "Dates must use the YYYY-MM-DD format"}), 400
-
-    if start_date > end_date:
-        return jsonify({"message": "The start date cannot be after the end date"}), 400
+    date_range, error_message = get_requested_date_range()
+    if error_message:
+        return jsonify({"message": error_message}), 400
+    start_date, end_date = date_range
 
     sales = db.get_sales_by_range(
         start_date.strftime("%Y-%m-%d 00:00:00"),
@@ -420,22 +441,10 @@ def dashboard_stats():
 
 @app.route("/api/activities")
 def get_activities():
-    rows = db.get_recent_activities()
-    activities = []
-    for row in rows:
-        activities.append({
-            "id" : row[0],
-            "username" : row[1],
-            "action" : row[2],
-            "item_name" : row[3],
-            "details" : row[4],
-            "timestamp" : row[5]
-        })
-    return jsonify(activities)
+    return jsonify([serialize_activity(activity) for activity in db.get_recent_activities()])
 
 @app.route("/api/sales/weekly")
 def get_weekly_sales():
-    from datetime import timedelta
     end_date = datetime.now()
     start_date = end_date - timedelta(days=6)
     sales_by_day = db.get_sales_by_day(
@@ -464,33 +473,15 @@ def get_all_activities():
         activities = db.get_activities_by_range(start, end)
     else:
         activities = db.get_recent_activities(limit=100)
-    result = []
-    for row in activities:
-        result.append({
-            "id" : row[0],
-            "username" : row[1],
-            "action" : row[2],
-            "item_name" : row[3],
-            "details" : row[4],
-            "timestamp" : row[5]
-        })
-    return jsonify(result)
+    return jsonify([serialize_activity(activity) for activity in activities])
 
 @app.route("/api/sales/summary")
 @login_required
 def get_sales_summary():
-    start = request.args.get("start")
-    end = request.args.get("end")
-
-    if not start or not end:
-        return jsonify({"message" : "start and end dates are required"}), 400
-    try:
-        start_date = datetime.strptime(start, "%Y-%m-%d")   
-        end_date = datetime.strptime(end, "%Y-%m-%d")
-    except ValueError:
-        return jsonify({"message" : "dates must be YYYY-MM-DD format"}), 400
-    if(start_date > end_date):
-        return jsonify({"message" : "start date cannot be after end date"}), 400
+    date_range, error_message = get_requested_date_range()
+    if error_message:
+        return jsonify({"message": error_message}), 400
+    start_date, end_date = date_range
     # ===== GET SALES DATA =====
     sales = db.get_sales_by_range(
         start_date.strftime("%Y-%m-%d 00:00:00"),
@@ -515,19 +506,10 @@ def get_sales_summary():
 @app.route("/api/sales/daily")
 @login_required
 def get_daily_sales():
-    start = request.args.get("start")
-    end = request.args.get("end")
-
-    if not start or not end:
-        return jsonify({"message" : "start and end dates are required"}), 400
-    try:
-        start_date = datetime.strptime(start, "%Y-%m-%d")
-        end_date = datetime.strptime(end, "%Y-%m-%d")
-    except ValueError:
-        return jsonify({"message" : "Dates must be YYYY-MM-DD format"}), 400
-    if start_date > end_date:
-        return jsonify({"message" : "start date cannot be after end date"}), 400
-    from datetime import timedelta
+    date_range, error_message = get_requested_date_range()
+    if error_message:
+        return jsonify({"message": error_message}), 400
+    start_date, end_date = date_range
 
     sales_by_day = db.get_sales_by_day(
         start_date.strftime("%Y-%m-%d 00:00:00"),
@@ -553,18 +535,10 @@ def get_daily_sales():
 @app.route("/api/sales/top-items")
 @login_required
 def get_top_items():
-    start = request.args.get("start")
-    end = request.args.get("end")
-
-    if not start or not end:
-        return jsonify({"message" : "start and end dates are required"}), 400
-    try:
-        start_date = datetime.strptime(start, "%Y-%m-%d")
-        end_date = datetime.strptime(end, "%Y-%m-%d")
-    except ValueError:
-        return jsonify({"message" : "Dates must be YYYY-MM-DD format"}), 400
-    if start_date > end_date:
-        return jsonify({"message" : "start date cannot be after end date"}), 400
+    date_range, error_message = get_requested_date_range()
+    if error_message:
+        return jsonify({"message": error_message}), 400
+    start_date, end_date = date_range
 
     sales = db.get_sales_by_range(
         start_date.strftime("%Y-%m-%d 00:00:00"),
@@ -582,33 +556,19 @@ def get_top_items():
 @app.route("/api/sales/detailed")
 @login_required
 def get_detailed_sales():
-    start = request.args.get("start")
-    end = request.args.get("end")
-
-    if not start or not end:
-        return jsonify({"message" : "start and end dates are required"}), 400
-    try:
-        start_date = datetime.strptime(start, "%Y-%m-%d")
-        end_date = datetime.strptime(end, "%Y-%m-%d")
-    except ValueError:
-        return jsonify({"message" : "Dates must be YYYY-MM-DD format"}), 400
-    if start_date > end_date:
-        return jsonify({"message" : "start date cannot be after end date"}), 400
+    date_range, error_message = get_requested_date_range()
+    if error_message:
+        return jsonify({"message": error_message}), 400
+    start_date, end_date = date_range
 
     sales = db.get_sales_by_range(
         start_date.strftime("%Y-%m-%d 00:00:00"),
         end_date.strftime("%Y-%m-%d 23:59:59")
     )
-    result = []
-    for sale in sales:
-        result.append({
-            "id" : sale[0],
-            "item_name" : sale[1],
-            "quantity": sale[2],
-            "price": sale[3],
-            "timestamp": sale[4],
-            "sold_by": sale[5]
-        })
+    result = [
+        serialize_sale(sale, item_key="item_name", include_sold_by=True)
+        for sale in sales
+    ]
     result.sort(key=lambda x: x["id"], reverse=True)
     return jsonify(result)
 

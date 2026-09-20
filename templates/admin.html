@@ -741,11 +741,7 @@
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-brand">Store<span>Stock</span></div>
 
-  <div class="profile-card" id="profileCard">
-    <img class="profile-photo" src="/static/images/profilepic.webp" alt="Profile photo">
-    <div class="profile-name" id="profileName"></div>
-    <div class="profile-role">Administrator</div>
-  </div>
+  {% include "partials/profile_card.html" %}
 
   <a class="nav-link" href="/inventory">🏠 Home</a>
   <a class="nav-link" href="/dashboard">📊 Dashboard</a>
@@ -873,7 +869,8 @@
   document.addEventListener("DOMContentLoaded", async function () {
     setupHamburger();
     setupTopLogout();
-    await loadCurrentUser();
+    const user = await window.authReady;
+    currentUser = user?.username || null;
     await loadUsers();
   });
 
@@ -895,17 +892,6 @@
       document.getElementById("sidebar").classList.remove("open");
       document.getElementById("overlay").classList.remove("open");
     });
-  }
-
-  // ===== LOAD CURRENT USER (to prevent self-delete) =====
-  async function loadCurrentUser() {
-    try {
-      const res = await fetch("/api/session-status");
-      const data = await res.json();
-      currentUser = data.username;
-    } catch (err) {
-      console.log("Could not fetch current user:", err);
-    }
   }
 
   // ===== LOAD USERS =====

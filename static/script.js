@@ -49,13 +49,7 @@ document.querySelector("#addBtn")?.addEventListener("click", async () => {
         if (existingEditBtn) {
             let li = existingEditBtn.closest("li");
             let itemInfo = li.querySelector(".itemInfo");
-            let stockClass = newItem.stock < 10 ? "stock-low" : "stock-ok";
-            let stockText = newItem.stock < 10 ? `${newItem.stock} left` : `${newItem.stock} units`;
-
-            itemInfo.innerHTML = `
-                <span class="itemNameValue">${newItem.name} - ${newItem.value} each</span>
-                <span class="stock-pill ${stockClass}">${stockText}</span>
-            `;
+            updateItemInfo(itemInfo, newItem.name, newItem.value, newItem.stock);
             existingEditBtn.dataset.stock = newItem.stock;
             showToast(`${newItem.name} restocked successfully`);
         } else {
@@ -85,31 +79,28 @@ if (params.get("login") === "success") {
     history.replaceState({}, "", "/inventory");
 }
 
-// ===== LOGOUT =====
-document.getElementById("logoutLink")?.addEventListener("click", async (event) => {
-    event.preventDefault();
-    try {
-        const response = await fetch("/api/logout", { method: "POST" });
-        const result = await response.json();
-        if (!response.ok) {
-            throw new Error("logout failed");
-        }
-        window.location.href = "/login";
-    } catch (error) {
-        console.log("Logout error: ", error);
-    }
-});
+// Keep every item row's stock label consistent after add, edit, and sell actions.
+function getItemInfoMarkup(name, value, stock) {
+    const stockClass = stock < 10 ? "stock-low" : "stock-ok";
+    const stockText = stock < 10 ? `${stock} left` : `${stock} units`;
+
+    return `
+        <span class="itemNameValue">${name} - ${value} each</span>
+        <span class="stock-pill ${stockClass}">${stockText}</span>
+    `;
+}
+
+function updateItemInfo(element, name, value, stock) {
+    element.innerHTML = getItemInfoMarkup(name, value, stock);
+}
 
 // ===== CREATE ITEM ELEMENT =====
 function createItemElement(item) {
     let li = document.createElement("li");
-    let stockClass = item.stock < 10 ? "stock-low" : "stock-ok";
-    let stockText = item.stock < 10 ? `${item.stock} left` : `${item.stock} units`;
     
     li.innerHTML = `
         <span class="itemInfo">
-            <span class="itemNameValue">${item.name} - ${item.value} each</span>
-            <span class="stock-pill ${stockClass}">${stockText}</span>
+            ${getItemInfoMarkup(item.name, item.value, item.stock)}
         </span>
         <span class="item-actions">
             <button class="btn-icon editBtn" data-name="${item.name}" data-stock="${item.stock}" data-value="${item.value}">✏️ Edit</button>
@@ -158,13 +149,7 @@ function createItemElement(item) {
             let displayedName = newName !== "" ? newName : name;
             let displayedStock = newStock !== "" ? parseInt(newStock) : parseInt(stock);
             let displayedValue = newValue !== "" ? parseInt(newValue) : parseInt(value);
-            let stockClass = displayedStock < 10 ? "stock-low" : "stock-ok";
-            let stockText = displayedStock < 10 ? `${displayedStock} left` : `${displayedStock} units`;
-            
-            itemInfo.innerHTML = `
-                <span class="itemNameValue">${displayedName} - ${displayedValue} each</span>
-                <span class="stock-pill ${stockClass}">${stockText}</span>
-            `;
+            updateItemInfo(itemInfo, displayedName, displayedValue, displayedStock);
 
             editBtn.dataset.name = displayedName;
             editBtn.dataset.stock = displayedStock;
@@ -193,13 +178,8 @@ function createItemElement(item) {
             let result = await sellItem(name, quantity);
             showToast(`${name} sold successfully`);
             let displayedStock = result.stock;
-            let stockClass = displayedStock < 10 ? "stock-low" : "stock-ok";
-            let stockText = displayedStock < 10 ? `${displayedStock} left` : `${displayedStock} units`;
             let itemInfo = li.querySelector(".itemInfo");
-            itemInfo.innerHTML = `
-                <span class="itemNameValue">${name} - ${editBtn.dataset.value} each</span>
-                <span class="stock-pill ${stockClass}">${stockText}</span>
-            `;
+            updateItemInfo(itemInfo, name, editBtn.dataset.value, displayedStock);
             editBtn.dataset.stock = displayedStock;
             updateStats();
             applyFilters();
@@ -374,45 +354,13 @@ if (searchInput) {
 
 window.filterItems = filterItems;
 
-// ===== AUTH =====
-async function updateAuthLinks() {
-    try {
-        const response = await fetch("/api/session-status");
-        const loginLink = document.getElementById("loginLink");
-        const signupLink = document.getElementById("signupLink");
-        const logoutLink = document.getElementById("logoutLink");
-        const adminLink = document.getElementById("adminLink");
-        const profileName = document.getElementById("profileName");
-        const welcomeUser = document.getElementById("welcomeUser");
-        const profileRole = document.querySelector(".profile-role");
-        const result = await response.json();
-        if (adminLink) adminLink.style.display = (result.logged_in && result.role === "admin") ? "block" : "none";
-        if (profileRole) profileRole.textContent = result.role === "admin" ? "Administrator" : (result.logged_in ? "Seller" : "Administrator");
-        
-        if (result.logged_in) {
-            if (loginLink) loginLink.style.display = "none";
-            if (signupLink) signupLink.style.display = "none";
-            if (logoutLink) logoutLink.style.display = "block";
-            var profileCard = document.getElementById("profileCard");
-            if (profileCard) profileCard.style.display = "flex";
-            if (profileName) {
-                profileName.style.display = "block";
-                profileName.textContent = result.username;
-            }
-            if(welcomeUser){
-                welcomeUser.textContent = result.username;
-            }
-        } else {
-            if (loginLink) loginLink.style.display = "block";
-            if (signupLink) signupLink.style.display = "block";
-            if (logoutLink) logoutLink.style.display = "none";
-            var profileCard = document.getElementById("profileCard");
-            if (profileCard) profileCard.style.display = "none";
-        }
-    } catch (error) {
-        console.log("couldn't check session status: ", error);
+// Page-specific welcome text uses the session data already fetched by auth.js.
+window.authReady?.then(function(user) {
+    const welcomeUser = document.getElementById("welcomeUser");
+    if (welcomeUser && user?.logged_in) {
+        welcomeUser.textContent = user.username;
     }
-}
+});
 
 // ===== INIT =====
 document.addEventListener("DOMContentLoaded", function() {
@@ -420,8 +368,6 @@ document.addEventListener("DOMContentLoaded", function() {
         loadItems();
         loadSalesHistory();
     }
-    updateAuthLinks();
-    
     // Apply low-stock filter if coming from dashboard
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('filter') === 'low-stock' && typeof filterItems === 'function') {
