@@ -133,12 +133,31 @@ def create_users_table():
             email TEXT UNIQUE NOT NULL,  
             dob TEXT NOT NULL,            
             created_at TEXT,
-            role TEXT DEFAULT 'seller'               
+            role TEXT DEFAULT 'seller',
+            notification_preference TEXT NOT NULL DEFAULT 'important'
         )
     """)
     conn.commit()
     conn.close()
     ensure_role_column()
+    ensure_notification_preference_column()
+
+def ensure_notification_preference_column():
+      # Add the column for databases created before this preference existed.
+      conn = get_connection()
+      cursor = conn.cursor()
+
+      cursor.execute("PRAGMA table_info(users)")
+      columns = [row[1] for row in cursor.fetchall()]
+
+      if "notification_preference" not in columns:
+          cursor.execute(
+              "ALTER TABLE users "
+              "ADD COLUMN notification_preference TEXT NOT NULL DEFAULT 'important'"
+          )
+          conn.commit()
+
+      conn.close()
 
 def ensure_role_column():
     # Keep databases created before user roles were added compatible.
@@ -259,6 +278,25 @@ def update_user_profile(username, full_name, email):
     cursor.execute("UPDATE users SET full_name = ?, email = ? WHERE username = ?", (full_name, email, username))
     conn.commit()
     changed = cursor.rowcount > 0
+    conn.close()
+    return changed
+
+def get_notification_preference(username):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT notification_preference FROM users WHERE username = ?",(username,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+def update_notification_preference(username, preference):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE users SET notification_preference = ? WHERE username = ?
+""",(preference, username))
+    conn.commit()
+    changed = cursor.rowcount>0
     conn.close()
     return changed
 

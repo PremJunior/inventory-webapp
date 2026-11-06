@@ -15,7 +15,7 @@ class DevConfig(Config):
 
 class ProdConfig(Config):
     DEBUG = False
-
+    SECRET_KEY = os.environ.get("SECRET_KEY")
 
 class TestConfig(Config):
     TESTING = True

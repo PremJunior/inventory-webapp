@@ -10,8 +10,6 @@ def validate_name(name):
         return False
     return True
 
-
-
 def _is_non_negative_integer(value):
     """Return whether a value can be stored as a non-negative whole number."""
     try:
@@ -26,3 +24,14 @@ def validate_stock(stock):
 
 def validate_value(value):
     return _is_non_negative_integer(value)
+
+def validate_email(email):
+    if not isinstance(email, str):
+        return False
+    email = email.strip()
+
+    if email.count("@") != 1:
+        return False
+
+    local_part, domain = email.split("@")
+    return bool(local_part) and "." in domain and not domain.startswith(".")

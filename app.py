@@ -2,25 +2,63 @@
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 from config import DevConfig, ProdConfig
 import database as db
-from validation import validate_name, validate_stock, validate_value
+from validation import validate_name, validate_stock, validate_value, validate_email
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.exceptions import HTTPException
 from functools import wraps
 from datetime import datetime, timedelta
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 app = Flask(__name__)
 
 if os.environ.get("FLASK_ENV") == "production":
     app.config.from_object(ProdConfig)
+    if not app.config["SECRET_KEY"]:
+        raise RuntimeError("SECRET_KEY must be set in production")
 else:
     app.config.from_object(DevConfig)
 
 app.secret_key = app.config["SECRET_KEY"]
+csrf = CSRFProtect(app)
 
 db.create_table()
 db.create_sales_table()
 db.create_users_table()
 db.create_activity_log_table()
 
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(error):
+    return jsonify({"message" : "Security token missing or expired. Refresh the page and try again."}), 400
+
+def is_api_request():
+    return request.path.startswith("/api/")
+
+def build_error_response(status_code, title, message):
+    if is_api_request():
+        return jsonify({
+            "message" : message,
+            "status_code" : status_code
+        }), status_code
+    return render_template(
+        "error.html",
+        status_code = status_code,
+        title = title,
+        message = message
+    ), status_code
+
+@app.errorhandler(HTTPException)
+def handle_http_error(error):
+    return build_error_response(error.code, error.name, error.description)
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(error):
+    app.logger.exception("Unhandled application error")
+    return build_error_response(
+        500,
+        "Internal Server Error",
+        "Something wrong on our side. Please try again later."
+    )
 
 def serialize_item(item):
     return {"name": item[0], "stock": item[1], "value": item[2]}
@@ -91,7 +129,9 @@ def admin_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if not session.get("logged_in"):
-            return redirect(url_for("login_page")) if request.path.startswith("/") and request.method == "GET" else (jsonify({"message" : "please login"}), 401)
+           if request.path.startswith("/api/"):
+               return jsonify({"message" : "please login"}), 401
+           return redirect(url_for("login_page"))
         user = db.get_user_by_username(session.get("username"))
         if not user or user[7] != "admin":
             # page request -> redirect, API request -> JSON 403
@@ -193,7 +233,7 @@ def update_me():
         return jsonify({"message" : "fullname and email required"}), 400
     if not validate_name(full_name):
         return jsonify({"message" : "fullname must contain only letter and space"}), 400
-    if "@" not in email or "." not in email:
+    if not validate_email(email):
         return jsonify({"message" : "invalid email format"}), 400
 
     existing = db.get_user_by_email(email)
@@ -204,6 +244,30 @@ def update_me():
     if not ok:
         return jsonify({"message" : "failed to update profile"}), 500
     return jsonify({"message" : "profile updated"}), 200
+
+@app.route("/api/preferences")
+@login_required
+def get_notification_preferences():
+    username = session.get("username")
+    preference = db.get_notification_preference(username)
+
+    if preference is None:
+        return jsonify({"message" : "user not found"}), 404
+    return jsonify({"notification_preference" : preference})
+
+@app.route("/api/preferences", methods = ["PUT"])
+@login_required
+def update_notification_preferences():
+    data = request.get_json(silent=True) or {}
+    preference = data.get("notification_preference")
+    allowed_preference = {"all", "important", "none"}
+    if preference not in allowed_preference:
+        return jsonify({"message" : "invalid notification preference"}), 400
+    username = session.get("username")
+    updated = db.update_notification_preference(username, preference)
+    if not updated:
+        return jsonify({"message" : "user not found"}), 400
+    return jsonify({"message" : "notification preference updated"}), 200
 
 @app.route("/api/change-password", methods=["POST"])
 @login_required
@@ -226,7 +290,8 @@ def change_password():
     db.update_user_password(username, new_hash)
     return jsonify({"message": "password updated"}), 200
 
-@app.route("/api/items")                                
+@app.route("/api/items")
+@login_required
 def get_items():
     return jsonify([serialize_item(item) for item in db.load_all_items()])
 
@@ -355,7 +420,8 @@ def sell_item(name):
     )
     return jsonify({"message" : "item sold", "stock" : remaining}),200
 
-@app.route("/api/sales", methods = ["GET"])
+@app.route("/api/sales")
+@login_required
 def get_sales():
     return jsonify([serialize_sale(sale) for sale in db.get_all_sales()])
 
@@ -378,12 +444,38 @@ def login():
 @app.route("/api/signup", methods = ["POST"])
 def signup():
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         fullname = data.get("fullname")
         dob = data.get("dob")
         email = data.get("email")
         username = data.get("username")
-        passwordhash = generate_password_hash(data.get("password"))
+        password = data.get("password")
+
+        if not all(isinstance(value, str) for value in [fullname, dob, email, username, password]):
+            return jsonify({"message" : "all fields are required"}), 400
+
+        fullname = fullname.strip()
+        email = email.strip()
+        username = username.strip()
+
+        if not validate_name(fullname):
+            return jsonify({"message": "full name can only contain letters and spaces"}), 400
+
+        if not validate_email(email):
+            return jsonify({"message": "invalid email format"}), 400
+
+        if not username:
+            return jsonify({"message": "username is required"}), 400
+
+        if len(password) < 8:
+            return jsonify({"message": "password must be at least 8 characters"}), 400
+
+        try:
+            datetime.strptime(dob, "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"message": "date of birth must use YYYY-MM-DD"}), 400
+
+        passwordhash = generate_password_hash(password)
 
         existing_user = db.get_user_by_username(username)
         if existing_user:
@@ -440,10 +532,12 @@ def dashboard_stats():
     })
 
 @app.route("/api/activities")
+@login_required
 def get_activities():
     return jsonify([serialize_activity(activity) for activity in db.get_recent_activities()])
 
 @app.route("/api/sales/weekly")
+@login_required
 def get_weekly_sales():
     end_date = datetime.now()
     start_date = end_date - timedelta(days=6)
@@ -465,6 +559,7 @@ def get_weekly_sales():
     return jsonify(result)
 
 @app.route("/api/activities/all")
+@login_required
 def get_all_activities():
     start = request.args.get("start")
     end = request.args.get("end")
@@ -642,4 +737,4 @@ def admin_delete_user_by_name(username):
     return jsonify({"message": "user deleted"}), 200
 
 if __name__ == "__main__": 
-    app.run(debug=True)
+    app.run(debug=app.config["DEBUG"])

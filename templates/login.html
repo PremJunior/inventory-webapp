@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+{% include "partials/csrf_meta.html" %}
 <meta charset="UTF-8">
 <title>Login — Inventory</title>
 <style>
@@ -611,6 +612,7 @@
   });
 </script>
 
+<script src="/static/csrf.js"></script>
 <script src="/static/login.js"></script>
 
 </body>

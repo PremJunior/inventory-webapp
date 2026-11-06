@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+{% include "partials/csrf_meta.html" %}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sign Up — Inventory</title>
@@ -688,6 +689,7 @@
 </div>
 
 <!-- ===== SCRIPTS ===== -->
+ <script src="/static/csrf.js"></script>
 <script>
   const hamburgerBtn = document.getElementById("hamburgerBtn");
   const sidebar = document.getElementById("sidebar");

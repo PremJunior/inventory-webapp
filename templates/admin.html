@@ -1,6 +1,7 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
+{% include "partials/csrf_meta.html" %}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>User Management</title>
@@ -857,6 +858,7 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <!-- ===== SCRIPTS ===== -->
+ <script src="/static/csrf.js"></script>
 <script src="/static/auth.js"></script>
 
 <script>
