@@ -1,13 +1,22 @@
-﻿import os
+import os
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 from config import DevConfig, ProdConfig
 import database as db
-from validation import validate_name, validate_stock, validate_value, validate_email
+from validation import (
+    validate_name,
+    validate_stock,
+    validate_value,
+    validate_email,
+    validate_quantity,
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import HTTPException
 from functools import wraps
 from datetime import datetime, timedelta
 from flask_wtf.csrf import CSRFProtect, CSRFError
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 
 app = Flask(__name__)
 
@@ -20,6 +29,12 @@ else:
 
 app.secret_key = app.config["SECRET_KEY"]
 csrf = CSRFProtect(app)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    storage_uri=os.environ.get("RATELIMIT_STORAGE_URI", "memory://"),
+)
 
 db.create_table()
 db.create_sales_table()
@@ -59,6 +74,16 @@ def handle_unexpected_error(error):
         "Internal Server Error",
         "Something wrong on our side. Please try again later."
     )
+
+@app.after_request      #modifies the response provided by the flask
+def add_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = (
+        "camera=(), microphone=(), geolocation=()"
+    )
+    return response
 
 def serialize_item(item):
     return {"name": item[0], "stock": item[1], "value": item[2]}
@@ -400,23 +425,25 @@ def edit_item(name):
 def sell_item(name):
     username = session["username"]
     data = request.get_json()
+    quantity = data.get("quantity")
     if not validate_name(name):
         return jsonify({"message" : "invalid name entered"}),400
-    if not validate_stock(data.get("quantity")):
+    if not validate_quantity(quantity):
         return jsonify({"message" : "invalid quantity"}),400
+    quantity = int(quantity)
     item = db.get_item_by_name(name)
     if not item:
         return jsonify({"message" : "item not found"}),404
-    if item[1] < data.get("quantity"):
+    if item[1] < quantity:
         return jsonify({"message" : "insufficient stock"}),400
-    remaining = item[1] - data.get("quantity")
+    remaining = item[1] - quantity
     db.update_item(name, new_stock= remaining)
-    db.record_sale(name, data.get("quantity"), item[2], username)
+    db.record_sale(name, quantity, item[2], username)
     db.record_activity(
         username,
         "item_sold",
         name,
-        f"Sold {data.get('quantity')}x {name} at Rs. {item[2]} each "
+        f"Sold {quantity}x {name} at Rs. {item[2]} each "
     )
     return jsonify({"message" : "item sold", "stock" : remaining}),200
 
@@ -426,6 +453,7 @@ def get_sales():
     return jsonify([serialize_sale(sale) for sale in db.get_all_sales()])
 
 @app.route("/api/login", methods = ["POST"])
+@limiter.limit("5 per minute")
 def login():
     data = request.get_json()
     username = data.get("username")
@@ -434,8 +462,10 @@ def login():
     if user is None:
         return jsonify({"message" : "invalid username or password"}),401
     if check_password_hash(user[2], password):
+        session.clear()
         session["logged_in"] = True
         session["username"] = username
+        session.permanent = True
         return jsonify({"message" : "logged in successfully"}),200
     else:
         return jsonify({"message" : "invalid username or password"}),401
@@ -486,8 +516,10 @@ def signup():
         
         created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         if db.create_user(username, passwordhash, fullname, email, dob, created_at):
+            session.clear()
             session["logged_in"] = True
             session["username"] = username
+            session.permanent = True
             return jsonify({"message" : "signed up successfully"}), 200
         else:
             return jsonify({"message" : "failed to sign up"}), 400
@@ -722,7 +754,9 @@ def admin_delete_user(user_id):
     target = db.get_user_by_id(user_id)
     if not target:
         return jsonify({"message" : "user not found"}), 404
-    db.delete_user_by_id(user_id)
+    deleted = db.delete_user_by_id(user_id)
+    if not deleted:
+        return jsonify({"message": "user not found"}), 404
     return jsonify({"message" : "user deleted"}), 200
 
 @app.route("/api/admin/users/<username>", methods=["DELETE"])
@@ -733,7 +767,9 @@ def admin_delete_user_by_name(username):
     user = db.get_user_by_username(username)
     if not user:
         return jsonify({"message": "user not found"}), 404
-    db.delete_user_by_id(user[0])
+    deleted = db.delete_user_by_id(user[0])
+    if not deleted:
+        return jsonify({"message": "user not found"}), 404
     return jsonify({"message": "user deleted"}), 200
 
 if __name__ == "__main__": 
